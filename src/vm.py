@@ -1,9 +1,10 @@
 import random
-from typing import List, Optional, Set, Callable
+from typing import Callable, List, Optional, Set
+
 
 # Weighted Edge
 class Edge:
-    def __init__(self, u: int, v: int, weight: int=1):
+    def __init__(self, u: int, v: int, weight: int = 1):
         self.u = u
         self.v = v
         self.weight = weight
@@ -19,7 +20,7 @@ class Graph:
         self.nodes: List[int] = []
 
     @staticmethod
-    def create_random_graph(n: int, m: Optional[int]=None) -> "Graph":
+    def create_random_graph(n: int, m: Optional[int] = None) -> "Graph":
         graph = Graph()
         for i in range(n):
             graph.add_node(i)
@@ -64,6 +65,7 @@ class Graph:
     def next_edge(self, node: int, edge: Edge) -> Edge:
         edges = [e for e in self.edges if e.u == node or e.v == node]
         return edges[(edges.index(edge) + 1) % len(edges)]
+
 
 class NodeEdgePointer:
     def __init__(self, node: int, edge: Edge):
@@ -175,7 +177,9 @@ class VirtualMachine:
         if self.stack:
             last_node = self.stack[-1].node
             last_edge = self.stack[-1].edge
-            self.stack[-1].node = last_edge.v if last_edge.u == last_node else last_edge.u
+            self.stack[-1].node = (
+                last_edge.v if last_edge.u == last_node else last_edge.u
+            )
             self.stack[-1].edge = last_edge
 
     def add_to_set(self) -> None:
