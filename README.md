@@ -17,3 +17,21 @@ memory. If the result is positive, the following command is executed, otherwise 
 skipped. Those operations might include fundamental arithmetic to allow aggregation
 of values.
 
+
+## Setup and Tooling
+Use the provided environment.yml file to create a conda environment with all necessary dependencies. 
+```bash
+conda env create -f environment.yml
+```
+Activate the environment with 
+```bash
+conda activate na_mst
+```
+
+Use the provided Makefile to run the tests, linter, formatter or MyPy type checker.  
+```bash
+make all
+```
+
+ENJOY! 
+
