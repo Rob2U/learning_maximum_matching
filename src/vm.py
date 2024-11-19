@@ -49,6 +49,11 @@ class Graph:
     def first_edge(self, node):
         return next(edge for edge in self.edges if edge.u == node or edge.v == node)
 
+class NodeEdgePointer:
+    def __init__(self, node, edge):
+        self.node = node
+        self.edge = edge
+
 class VirtualMachine:
     
     def __init__(self, code):
@@ -59,11 +64,9 @@ class VirtualMachine:
         self.pc = 0
         self.input = None
 
-        self.node_ptr = None
-        self.edge_ptr = None
-        self.mark_stack = None
-
+        self.mark_stack = []
         self.stack = []
+        self.set = set()
 
         self.ret_register = -1
         self.value_register = -1
@@ -121,7 +124,7 @@ class VirtualMachine:
 
 
     def push_mark(self):
-        self.mark_stack.push(self.pc + 1)
+        self.mark_stack.append(self.pc + 1)
 
     def jump(self):
         self.pc = self.pop_mark()
@@ -132,69 +135,56 @@ class VirtualMachine:
 
     def push_start_node(self):
         first_node = self.input.first_node()
-        self.stack.push((first_node, self.input.first_edge(first_node)))
-
-    def push_clone_node(self, node):
-        self.node_ptr = node
-
-    def push_edge_ptr(self, edge):
-        self.edge_ptr = edge
-
-    def push_mark(self, mark):
-        self.mark = mark
-
-    def pop_node_ptr(self):
-        node = self.node_ptr
-        self.node_ptr = None
-        return node
-
-    def pop_edge_ptr(self):
-        edge = self.edge_ptr
-        self.edge_ptr = None
-        return edge
-
-    def pop_mark(self):
-        mark = self.mark
-        self.mark = None
-        return mark
+        self.stack.append(NodeEdgePointer(first_node, self.input.first_edge(first_node)))
 
     def push_clone_node(self):
-        self.push(self.node_ptr.clone())
+        if self.stack:
+            clone_node = self.stack[-1].node.clone()
+            self.stack.append(NodeEdgePointer(clone_node, self.input.first_edge(clone_node)))
 
-    def add_to_set(self):
-        self.node_ptr.add_to_set(self.pop())
+    def pop_node_ptr(self):
+        self.stack.pop()
 
     def next_node(self):
-        self.push(self.node_ptr.next_node())
+        if self.node_ptr:
+            last_node, _ = self.stack[-1]
+            next_node = self.input.next_node(last_node)
+            self.stack[-1].node = next_node
+            self.stack[-1].edge = self.input.first_edge(next_node)
 
     def next_edge(self):
-        self.push(self.node_ptr.next_edge())
+        self.stack[-1].edge = self.input.next_edge(self.stack[-1].node, self.stack[-1].edge)
 
     def to_neighbor(self):
-        self.push(self.node_ptr.to_neighbor(self.pop()))
+        last_node, last_edge = self.stack[-1]
+        self.stack[-1].node = last_edge.v if last_edge.u == last_node else last_edge.u
+        self.stack[-1].edge = last_edge
 
+
+    def add_to_set(self):
+        self.set.add(self.stack[-1].node.value)
+
+
+    # TODO!
     def br_last_node(self):
-        if self.node_ptr.last_node:
-            self.pc += 1
+        pass
 
     def br_last_edge(self):
-        if self.edge_ptr.last_edge:
-            self.pc += 1
+        pass
 
     def write_edge(self):
-        self.edge_ptr.write(self.pop())
+        pass
 
     def add_out(self):
-        self.node_ptr.add_out(self.pop())
+        pass
 
+
+    # TODO!
     def cmp_eq(self):
-        self.push(self.pop() == self.pop())
+        pass
 
     def cmp_gt(self):
-        self.push(self.pop() > self.pop())
+        pass
 
     def is_in_set(self):
-        self.push(self.pop() in self.node_ptr.set)
-
-    def mark(self):
-        self
+        pass
