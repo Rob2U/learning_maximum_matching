@@ -1,14 +1,14 @@
 import random
-from typing import List, Optional, Set
+from typing import List, Optional, Set, Callable
 
 # Weighted Edge
 class Edge:
-    def __init__(self, u: int, v: int, weight=1):
+    def __init__(self, u: int, v: int, weight: int=1):
         self.u = u
         self.v = v
         self.weight = weight
 
-    def has_nodes(self, u: int, v: int):
+    def has_nodes(self, u: int, v: int) -> bool:
         return self.u == u and self.v == v
 
 
@@ -36,32 +36,32 @@ class Graph:
 
         return graph
 
-    def add_node(self, node: int):
+    def add_node(self, node: int) -> None:
         self.nodes.append(node)
 
-    def add_edge(self, u: int, v: int, weight: int):
+    def add_edge(self, u: int, v: int, weight: int) -> None:
         self.edges.append(Edge(u, v, weight))
 
-    def has_edge(self, u: int, v: int):
+    def has_edge(self, u: int, v: int) -> bool:
         return any(edge.has_nodes(u, v) for edge in self.edges) or any(
             edge.has_nodes(v, u) for edge in self.edges
         )
 
-    def first_node(self):
+    def first_node(self) -> int:
         if not self.nodes:
             raise ValueError("Graph has no nodes")
 
         return self.nodes[0]
 
-    def first_edge(self, node: int):
+    def first_edge(self, node: int) -> Edge:
         return next(edge for edge in self.edges if edge.u == node or edge.v == node)
 
-    def next_node(self, node: int):
+    def next_node(self, node: int) -> int:
         if node not in self.nodes:
             raise ValueError(f"Node {node} not in graph")
         return self.nodes[(self.nodes.index(node) + 1) % len(self.nodes)]
 
-    def next_edge(self, node: int, edge: Edge):
+    def next_edge(self, node: int, edge: Edge) -> Edge:
         edges = [e for e in self.edges if e.u == node or e.v == node]
         return edges[(edges.index(edge) + 1) % len(edges)]
 
@@ -88,7 +88,7 @@ class VirtualMachine:
         self.value_register: int = -1
         self.early_ret: bool = False
 
-    def run(self):
+    def run(self) -> int:
         while self.pc < len(self.code):
             op = self.code[self.pc]
             self.run_instruction(op)
@@ -100,8 +100,8 @@ class VirtualMachine:
 
         return self.ret_register
 
-    def run_instruction(self, op: int):
-        instructions = [
+    def run_instruction(self, op: int) -> None:
+        instructions: List[Callable[[], None]] = [
             self.nop,
             self.ret,
             self.push_mark,
@@ -125,76 +125,82 @@ class VirtualMachine:
 
         instructions[op]()
 
-    def nop(self):
+    def nop(self) -> None:
         pass
 
-    def ret(self):
+    def ret(self) -> None:
         self.early_ret = True
 
-    def push_mark(self):
+    def push_mark(self) -> None:
         self.mark_stack.append(self.pc + 1)
 
-    def jump(self):
-        self.pc = self.pop_mark()
+    def jump(self) -> None:
+        self.pc = self.mark_stack.pop()
 
-    def pop_mark(self):
-        self.mark_stack.pop()
+    def pop_mark(self) -> None:
+        if self.mark_stack:
+            self.mark_stack.pop()
 
-    def push_start_node(self):
+    def push_start_node(self) -> None:
         first_node = self.input.first_node()
         self.stack.append(
             NodeEdgePointer(first_node, self.input.first_edge(first_node))
         )
 
-    def push_clone_node(self):
+    def push_clone_node(self) -> None:
         if self.stack:
             clone_node = self.stack[-1].node
             self.stack.append(
                 NodeEdgePointer(clone_node, self.input.first_edge(clone_node))
             )
 
-    def pop_node_ptr(self):
-        self.stack.pop()
-
-    def next_node(self):
+    def pop_node_ptr(self) -> None:
         if self.stack:
-            last_node, _ = self.stack[-1]
+            self.stack.pop()
+
+    def next_node(self) -> None:
+        if self.stack:
+            last_node = self.stack[-1].node
             next_node = self.input.next_node(last_node)
             self.stack[-1].node = next_node
             self.stack[-1].edge = self.input.first_edge(next_node)
 
-    def next_edge(self):
-        self.stack[-1].edge = self.input.next_edge(
-            self.stack[-1].node, self.stack[-1].edge
-        )
+    def next_edge(self) -> None:
+        if self.stack:
+            self.stack[-1].edge = self.input.next_edge(
+                self.stack[-1].node, self.stack[-1].edge
+            )
 
-    def to_neighbor(self):
-        last_node, last_edge = self.stack[-1]
-        self.stack[-1].node = last_edge.v if last_edge.u == last_node else last_edge.u
-        self.stack[-1].edge = last_edge
+    def to_neighbor(self) -> None:
+        if self.stack:
+            last_node = self.stack[-1].node
+            last_edge = self.stack[-1].edge
+            self.stack[-1].node = last_edge.v if last_edge.u == last_node else last_edge.u
+            self.stack[-1].edge = last_edge
 
-    def add_to_set(self):
-        self.set.add(self.stack[-1].node)
-
-    # TODO!
-    def br_last_node(self):
-        pass
-
-    def br_last_edge(self):
-        pass
-
-    def write_edge(self):
-        pass
-
-    def add_out(self):
-        pass
+    def add_to_set(self) -> None:
+        if self.stack:
+            self.set.add(self.stack[-1].node)
 
     # TODO!
-    def cmp_eq(self):
+    def br_last_node(self) -> None:
         pass
 
-    def cmp_gt(self):
+    def br_last_edge(self) -> None:
         pass
 
-    def is_in_set(self):
+    def write_edge(self) -> None:
+        pass
+
+    def add_out(self) -> None:
+        pass
+
+    # TODO!
+    def cmp_eq(self) -> None:
+        pass
+
+    def cmp_gt(self) -> None:
+        pass
+
+    def is_in_set(self) -> None:
         pass
