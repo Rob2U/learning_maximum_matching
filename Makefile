@@ -13,7 +13,7 @@ lint:
 
 .PHONY: mypy
 mypy:
-	mypy $(sources) --exclude ^dlib/
+	mypy $(sources) --config-file mypy.ini
 
 .PHONY: all
 all:
