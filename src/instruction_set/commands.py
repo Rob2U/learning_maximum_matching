@@ -52,7 +52,7 @@ class RET(AbstractCommand):
 
 class PUSH_MARK(AbstractCommand):
     def execute(self, state: State) -> None:
-        state.mark_stack.append(state.pc + 1)
+        state.mark_stack.append(state.pc)
 
     def is_applicable(self, state: State) -> bool:
         return True
@@ -81,7 +81,8 @@ class POP_MARK(AbstractCommand):
 
 class JUMP(AbstractCommand):
     def execute(self, state: State) -> None:
-        state.pc = state.mark_stack.pop()
+        if state.mark_stack:
+            state.pc = state.mark_stack.pop()
 
     def is_applicable(self, state: State) -> bool:
         return True
@@ -227,11 +228,11 @@ class TO_NEIGHBOR(AbstractCommand):
         return "TO_NEIGHBOR"
 
 
-class IF_IS_FIRST_NODE(AbstractCommand):
+class IF_IS_NOT_FIRST_NODE(AbstractCommand):
     def execute(self, state: State) -> None:
         if state.stack:
             last_node = state.stack[-1].node
-            if last_node != state.input.first_node():
+            if last_node == state.input.first_node():
                 state.pc += 1
 
     def is_applicable(self, state: State) -> bool:
@@ -244,12 +245,12 @@ class IF_IS_FIRST_NODE(AbstractCommand):
         return "IF_IS_NOT_FIRST_NODE"
 
 
-class IF_IS_FIRST_EDGE(AbstractCommand):
+class IF_IS_NOT_FIRST_EDGE(AbstractCommand):
     def execute(self, state: State) -> None:
         if state.stack:
             last_node = state.stack[-1].node
             last_edge = state.stack[-1].edge
-            if last_edge != state.input.first_edge(last_node):
+            if last_edge == state.input.first_edge(last_node):
                 state.pc += 1
 
     def is_applicable(self, state: State) -> bool:
