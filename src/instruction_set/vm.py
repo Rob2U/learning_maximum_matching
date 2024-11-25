@@ -86,7 +86,7 @@ class Transpiler:
 
 if __name__ == "__main__":
     # Lets write PRIM algorithm in our instruction set
-    test_graph = generate_graph(50, 200)
+    test_graph = generate_graph(10, 20)
 
     code = [
         PUSH_START_NODE,

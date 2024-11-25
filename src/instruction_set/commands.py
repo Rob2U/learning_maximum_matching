@@ -52,7 +52,7 @@ class RET(AbstractCommand):
 
 class PUSH_MARK(AbstractCommand):
     def execute(self, state: State) -> None:
-        state.mark_stack.append(state.pc)
+        state.mark_stack.append(state.pc - 1)
 
     def is_applicable(self, state: State) -> bool:
         return True
