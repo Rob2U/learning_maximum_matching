@@ -11,6 +11,12 @@ class Edge:
     def has_nodes(self, u: int, v: int) -> bool:
         return self.u == u and self.v == v
 
+    def __str__(self) -> str:
+        return f"({self.u}, {self.v}, {self.weight})"
+    
+    def __repr__(self) -> str:
+        return str(self)
+    
 
 class NodeEdgePointer:
     def __init__(self, node: int, edge: Edge):
@@ -22,7 +28,6 @@ class Graph:
     def __init__(self) -> None:
         self.edges: List[Edge] = []
         self.nodes: List[int] = []
-
 
     def add_node(self, node: int) -> None:
         self.nodes.append(node)

@@ -38,8 +38,8 @@ ENJOY!
 
 ## ToDos
 - Implement the instruction set -> done (untested)
-- Implement the transpiler 
-- Implement the Graph Generation
+- Implement the transpiler -> done (untested)
+- Implement the Graph Generation -> done
 - Write PRIM algorithm to prove that instruction set works
 
 ## Might Do

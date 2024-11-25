@@ -1,6 +1,6 @@
 from typing import List, Set
 
-from instruction_set_rl.structure_elements import NodeEdgePointer, Graph
+from .structure_elements import Graph, NodeEdgePointer
 
 
 class State:
@@ -14,9 +14,10 @@ class State:
 
     ret_register: Return register?
     value_register: Value register?
-    early_ret: Flag for early return?    
+    early_ret: Flag for early return?
 
     """
+
     input: Graph
     pc: int
     mark_stack: List[int]
@@ -26,11 +27,11 @@ class State:
     ret_register: int
     value_register: int
     early_ret: bool
-    
+
     def __init__(self, input: Graph):
         self.input = input
         self.reset()
-    
+
     def reset(self) -> None:
         self.pc: int = 0
         self.mark_stack: List[int] = []
@@ -40,4 +41,3 @@ class State:
         self.ret_register: int = -1
         self.value_register: int = -1
         self.early_ret: bool = False
-    

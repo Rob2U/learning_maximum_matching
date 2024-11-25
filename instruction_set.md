@@ -2,7 +2,7 @@
 Stack of instruction marks
 - PUSH_MARK
 - JUMP (to last mark + pop it from stack)
-- POP_MARK (pop it from stack)
+- POP_MARK (pop it from stack and do not jump)
 
 Pointer Stack
 - PUSH_START_NODE (add first node to top of pointer stack)
@@ -23,6 +23,6 @@ Graph Traversal (current pointer = top of pointer stack)
 Short-Term Memory (General Registers)
 - WRITE_EDGE_WEIGHT (write value of current edge pointer to register 1)
 - RESET_EDGE_WEIGHT (reset value of register 1)
-- ADD_OUT (initialized with 0; Adds value of register 1 to register 2)
+- ADD_TO_OUT (initialized with 0; Adds value of register 1 to register 2)
 
 - IF_EDGE_WEIGHT_GT
