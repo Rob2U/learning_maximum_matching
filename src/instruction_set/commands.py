@@ -1,8 +1,6 @@
-import random
 from abc import ABC, abstractmethod
-from typing import Callable, List, Optional, Set
 
-from .structure_elements import Graph, NodeEdgePointer
+from .structure_elements import NodeEdgePointer
 from .vm_state import State
 
 

@@ -70,6 +70,8 @@ COMMAND_REGISTRY = [
     ADD_TO_OUT,
     IF_EDGE_WEIGHT_GT,
 ]
+
+
 class Transpiler:
     """Translates a list of integers to a list of AbstractCommands and back"""
 

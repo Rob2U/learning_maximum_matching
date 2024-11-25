@@ -13,10 +13,10 @@ class Edge:
 
     def __str__(self) -> str:
         return f"({self.u}, {self.v}, {self.weight})"
-    
+
     def __repr__(self) -> str:
         return str(self)
-    
+
 
 class NodeEdgePointer:
     def __init__(self, node: int, edge: Edge):
