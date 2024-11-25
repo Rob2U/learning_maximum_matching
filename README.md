@@ -28,10 +28,25 @@ Activate the environment with
 conda activate na_mst
 ```
 
+To install the instruction set package in editable mode, run the following command in the root directory of the repository.
+```bash
+pip install -e instruction_set_rl
+```
+
 Use the provided Makefile to run the tests, linter, formatter or MyPy type checker.  
 ```bash
 make all
 ```
 
 ENJOY! 
+
+
+## ToDos
+- Implement the instruction set -> done (untested)
+- Implement the transpiler 
+- Implement the Graph Generation
+- Write PRIM algorithm to prove that instruction set works
+
+## Might Do
+- Add logging to the virtual machine / commands
 
