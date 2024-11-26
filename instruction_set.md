@@ -13,6 +13,11 @@ Set
 - ADD_TO_SET (adds current node pointer to set)
 - IF_IN_SET (if current node pointer is in set, execute next command, else skip it)
 
+Heap
+- PUSH_HEAP (adds node/edge combinations to a min heap)
+- POP_HEAP (retrieves node/edge with the smallest edge weight from the heap)
+- IF_HEAP_EMPTY (if heap is empty, execute next command, else skip it)
+
 Graph Traversal (current pointer = top of pointer stack)
 - NEXT_NODE (iterate to next node on current pointer)
 - NEXT_EDGE (iterate to next edge relative to current node)
