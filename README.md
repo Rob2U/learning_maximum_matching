@@ -33,6 +33,12 @@ Use the provided Makefile to run the tests, linter, formatter or MyPy type check
 make all
 ```
 
+### Update Environment
+In the unlikely case that someone changed the environment.yml file, you can update the environment with the following command: (environment should be active)
+```bash
+conda env update --file environment.yml --prune
+```
+
 ENJOY! 
 
 

@@ -11,6 +11,7 @@ dependencies:
   - pytorch=2.4
   - torchvision
   - wandb
+  - gymnasium
   # - lightning # PyTorch Lightning? Not sure if we need it
 
   # Good to have
@@ -37,3 +38,4 @@ dependencies:
       - simple_parsing
       - print-on-steroids[exceptions]
       - wandb[sweeps]
+      - stable-baselines3
