@@ -23,6 +23,7 @@ class State:
     mark_stack: List[int]
     stack: List[NodeEdgePointer]
     set: Set[int]
+    heap: List[NodeEdgePointer]
 
     ret_register: int
     value_register: int
@@ -37,6 +38,7 @@ class State:
         self.mark_stack: List[int] = []
         self.stack: List[NodeEdgePointer] = []
         self.set: Set[int] = set()
+        self.heap: List[NodeEdgePointer] = []
 
         self.ret_register: int = -1
         self.value_register: int = -1

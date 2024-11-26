@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from .structure_elements import NodeEdgePointer
 from .vm_state import State
 
+import heapq
 
 class AbstractCommand(ABC):
     @abstractmethod
@@ -171,6 +172,53 @@ class IF_IN_SET(AbstractCommand):  # NOTE: could be unnecessary
 
     def is_comparison(self) -> bool:
         return True
+    
+    def __str__(self) -> str:
+        return "IF_IN_SET"
+
+
+class PUSH_HEAP(AbstractCommand):
+    def execute(self, state: State) -> None:
+        if state.stack:
+            heapq.heappush(state.heap, state.stack[-1])
+
+    def is_applicable(self, state: State) -> bool:
+        return len(state.stack) > 0
+
+    def is_comparison(self) -> bool:
+        return False
+
+    def __str__(self) -> str:
+        return "PUSH_HEAP"
+
+
+class POP_HEAP(AbstractCommand):
+    def execute(self, state: State) -> None:
+        state.value_register = heapq.heappop(state.heap)
+
+    def is_applicable(self, state: State) -> bool:
+        return len(state.heap) == 0
+
+    def is_comparison(self) -> bool:
+        return False
+
+    def __str__(self) -> str:
+        return "POP_HEAP"
+
+
+class IF_HEAP_EMPTY(AbstractCommand):
+    def execute(self, state: State) -> None:
+        if len(state.heap) > 0:
+            state.pc += 1
+
+    def is_applicable(self, state: State) -> bool:
+        return True
+
+    def is_comparison(self) -> bool:
+        return True
+
+    def __str__(self) -> str:
+        return "POP_HEAP"
 
 
 class NEXT_NODE(AbstractCommand):
@@ -317,6 +365,9 @@ class IF_EDGE_WEIGHT_GT(AbstractCommand):
 
     def is_comparison(self) -> bool:
         return True
+
+    def __str__(self) -> str:
+        return "IF_EDGE_WEIGHT_GT"
 
 
 # class IF_EQ(AbstractCommand):

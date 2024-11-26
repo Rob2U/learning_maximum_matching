@@ -7,6 +7,9 @@ from .commands import (
     IF_IN_SET,
     IF_IS_NOT_FIRST_EDGE,
     IF_IS_NOT_FIRST_NODE,
+    PUSH_HEAP,
+    POP_HEAP,
+    IF_HEAP_EMPTY,
     JUMP,
     NEXT_EDGE,
     NEXT_NODE,
@@ -62,6 +65,9 @@ COMMAND_REGISTRY = [
     POP_NODE,
     ADD_TO_SET,
     IF_IN_SET,
+    PUSH_HEAP,
+    POP_HEAP,
+    IF_HEAP_EMPTY,
     NEXT_NODE,
     NEXT_EDGE,
     TO_NEIGHBOR,
@@ -92,6 +98,7 @@ if __name__ == "__main__":
         PUSH_START_NODE,
         ADD_TO_SET,
         PUSH_MARK,  # LOOP START
+        PUSH_HEAP,
         NEXT_NODE,
         IF_IS_NOT_FIRST_NODE,  # LOOP END CONDITION
             JUMP,
