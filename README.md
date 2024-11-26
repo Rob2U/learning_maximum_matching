@@ -37,12 +37,8 @@ ENJOY!
 
 
 ## ToDos
-- Implement the instruction set -> done (untested)
-- Implement the transpiler -> done (untested)
-- Implement the Graph Generation -> done
-- Implement heap -> almost done (untested, have to decide where to pop to)
-- Write PRIM algorithm to prove that instruction set works
-- Setup Reinforcement Learning framework
+- Write PRIM algorithm to prove that instruction set works (add adapt insturction set)
+- Setup Reinforcement Learning framework (gymansium adatper + stable-baselines)
 - Implement reward functions (given state return number)
 
 ## Might Do
