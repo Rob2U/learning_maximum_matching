@@ -86,7 +86,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):  # TODO(rob2u)
         m = random.randint(n - 1, self.max_m)
 
         graph = generate_graph(n, m, seed=None)
-        self.vm = VirtualMachine(code, graph)
+        self.vm = VirtualMachine([], graph)
 
         # NOTE(rob2u): might be worth trying to parse the entire state of the VM (as above)
         return np.array([]), {}
@@ -106,7 +106,7 @@ class VirtualMachine:
         self.code = code
         self.state = State(input)
         self.truncation = 1000  # Maximum number of instructions before truncating
-        self.timeout = input.n**2 * input.m**2  # we let it run for a quite a while
+        self.timeout = (len(input.edges) * len(input.nodes)**2)  # we let it run for a quite a while
 
     def run(self) -> Tuple[int, bool]:
         execution_counter = 0

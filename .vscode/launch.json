@@ -1,0 +1,10 @@
+{
+  "configurations": [
+    {
+      "type": "debugpy",
+      "request": "launch",
+      "name": "Launch Train Script",
+      "program": "${workspaceFolder}/src/train.py"
+    }
+  ]
+}

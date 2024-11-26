@@ -3,13 +3,13 @@ import numpy as np
 import stable_baselines3 as sb3
 from stable_baselines3.common.env_util import make_vec_env
 
-from .environment.environment import MSTCodeEnvironment, Transpiler
+from environment.environment import MSTCodeEnvironment, Transpiler
 
 if __name__ == "__main__":
     gym.register("MSTCode-v0", entry_point=MSTCodeEnvironment)
 
-    vectorized_env = make_vec_env("MSTCode-v0", n_envs=10)
-    model = sb3.PPO("MlpPolicy", vectorized_env, verbose=1, device="cpu")  # type: ignore
+    env = gym.make("MSTCode-v0")
+    model = sb3.PPO("MlpPolicy", env, verbose=1, device="cpu")  # type: ignore
 
     model.learn(total_timesteps=10000)
 
