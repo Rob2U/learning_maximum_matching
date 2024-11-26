@@ -194,7 +194,9 @@ class PUSH_HEAP(AbstractCommand):
 
 class POP_HEAP(AbstractCommand):
     def execute(self, state: State) -> None:
-        state.value_register = heapq.heappop(state.heap)
+        if len(state.heap) > 0:
+            # TODO(philippkolbe): we have to decide where we want to pop the node to
+            state.value_register = heapq.heappop(state.heap).node
 
     def is_applicable(self, state: State) -> bool:
         return len(state.heap) == 0

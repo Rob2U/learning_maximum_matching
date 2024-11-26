@@ -40,7 +40,10 @@ ENJOY!
 - Implement the instruction set -> done (untested)
 - Implement the transpiler -> done (untested)
 - Implement the Graph Generation -> done
+- Implement heap -> almost done (untested, have to decide where to pop to)
 - Write PRIM algorithm to prove that instruction set works
+- Setup Reinforcement Learning framework
+- Implement reward functions (given state return number)
 
 ## Might Do
 - Add logging to the virtual machine / commands
