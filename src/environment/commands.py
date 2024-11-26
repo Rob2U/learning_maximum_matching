@@ -1,9 +1,9 @@
+import heapq
 from abc import ABC, abstractmethod
 
 from .structure_elements import NodeEdgePointer
 from .vm_state import State
 
-import heapq
 
 class AbstractCommand(ABC):
     @abstractmethod
@@ -172,7 +172,7 @@ class IF_IN_SET(AbstractCommand):  # NOTE: could be unnecessary
 
     def is_comparison(self) -> bool:
         return True
-    
+
     def __str__(self) -> str:
         return "IF_IN_SET"
 

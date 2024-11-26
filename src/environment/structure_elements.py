@@ -22,7 +22,7 @@ class NodeEdgePointer:
     def __init__(self, node: int, edge: Edge):
         self.node: int = node
         self.edge: Edge = edge
-        
+
     def __lt__(self, other: "NodeEdgePointer") -> bool:
         return self.edge.weight < other.edge.weight
 

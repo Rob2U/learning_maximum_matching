@@ -1,13 +1,15 @@
 import random
+from typing import Union
 
 from .structure_elements import Graph
 
 
 def generate_graph(
-    n: int, m: int, seed: int = 69, distinct_weights: bool = True
+    n: int, m: int, seed: Union[int, None] = 69, distinct_weights: bool = True
 ) -> Graph:
     """Generate a random graph with n nodes and m edges"""
-    random.seed(seed)
+    if seed:
+        random.seed(seed)
     graph = Graph()
     for i in range(n):
         graph.add_node(i)

@@ -43,7 +43,7 @@ ENJOY!
 
 
 ## ToDos
-- Write PRIM algorithm to prove that instruction set works (add adapt insturction set)
+- Write PRIM algorithm to prove that instruction set works (add adapt instruction set)
 - Setup Reinforcement Learning framework (gymansium adatper + stable-baselines)
 - Implement reward functions (given state return number)
 
