@@ -358,7 +358,7 @@ class ADD_TO_OUT(AbstractCommand):
 
 
 class IF_EDGE_WEIGHT_GT(AbstractCommand):
-    def execute(self, state: State) -> None:        
+    def execute(self, state: State) -> None:
         if state.stack and state.value_register >= state.stack[-1].edge.weight:
             state.pc += 1
 

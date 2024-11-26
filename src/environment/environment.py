@@ -1,5 +1,5 @@
 import random
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Type
 
 import gymnasium as gym
 import numpy as np
@@ -46,7 +46,9 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):  # TODO(rob2u)
             len(COMMAND_REGISTRY)
         )  # action_space contains all the possible instructions for the next line
         # self.observation_space = gym.spaces.Sequence(gym.spaces.Discrete(len(COMMAND_REGISTRY)))  # type: ignore
-        self.observation_space = gym.spaces.MultiDiscrete([len(COMMAND_REGISTRY) + 1] * self.max_code_length)
+        self.observation_space = gym.spaces.MultiDiscrete(
+            [len(COMMAND_REGISTRY) + 1] * self.max_code_length
+        )
         # observation_space contains the current state of the VM (as we have full control over our VM)
         # self.metadata = {
         #     "render.modes": [],
@@ -65,13 +67,15 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):  # TODO(rob2u)
         instruction = Transpiler.intToCommand([action + 1])[0]
         truncated = not self.vm.append_instruction(instruction)
         result, terminated = self.vm.run()
-        reward = reward_naive(self.vm.state, self.vm.code, result)
+        reward = reward_naive(self.vm.state.input, self.vm.code, result)
 
         # NOTE(rob2u): might be worth trying to parse the entire return state of the VM + code
-        observation = np.array(Transpiler.commandToInt(self.vm.code))
-        observation = np.concatenate([observation, (self.max_code_length  - len(observation) )* [0]])
+        observation: npt.NDArray[int, 1] = np.array(Transpiler.commandToInt(self.vm.code))  # type: ignore
+        observation = np.concatenate(
+            [observation, (self.max_code_length - observation.shape[0]) * [0]]
+        )
         assert observation.shape[0] == self.max_code_length, "Bad observation shape!"
-        
+
         return observation, reward, terminated, truncated, {}
 
     def reset(
@@ -106,16 +110,25 @@ class VirtualMachine:
     See instruction_set.md for more info.
     """
 
-    def __init__(self, code: List[AbstractCommand], input: Graph, truncated_after: int = 1000):
+    def __init__(
+        self,
+        code: List[Type[AbstractCommand]],
+        input: Graph,
+        truncated_after: int = 1000,
+    ):
         self.code = code
         self.state = State(input)
-        self.truncated_after = truncated_after  # Maximum number of instructions before truncating
-        self.timeout = (len(input.edges) * len(input.nodes)**2)  # we let it run for a quite a while
+        self.truncated_after = (
+            truncated_after  # Maximum number of instructions before truncating
+        )
+        self.timeout = (
+            len(input.edges) * len(input.nodes) ** 2
+        )  # we let it run for a quite a while
 
     def run(self) -> Tuple[int, bool]:
         execution_counter = 0
         while self.state.pc < len(self.code):
-            op = self.code[self.state.pc]()
+            op = self.code[self.state.pc]()  # type: ignore
             op.execute(self.state)
 
             self.state.pc += 1
@@ -126,9 +139,12 @@ class VirtualMachine:
             if execution_counter > self.timeout:
                 break
 
-        return int(self.state.ret_register), False
+        return (
+            int(self.state.ret_register),
+            execution_counter > self.timeout or self.state.early_ret,
+        )
 
-    def append_instruction(self, instruction: AbstractCommand) -> bool:
+    def append_instruction(self, instruction: Type[AbstractCommand]) -> bool:
         """Add an instruction to the code if it is not too long. If it is too long, return False"""
         if len(self.code) < self.truncated_after:
             self.code.append(instruction)
@@ -137,7 +153,7 @@ class VirtualMachine:
             return False
 
 
-COMMAND_REGISTRY = [
+COMMAND_REGISTRY: List[Type[AbstractCommand]] = [
     NOP,
     RET,
     PUSH_MARK,
@@ -167,11 +183,11 @@ class Transpiler:
     """Translates a list of integers to a list of AbstractCommands and back"""
 
     @staticmethod
-    def commandToInt(code: List[AbstractCommand]) -> List[int]:
+    def commandToInt(code: List[Type[AbstractCommand]]) -> List[int]:
         return [COMMAND_REGISTRY.index(op) + 1 for op in code]
 
     @staticmethod
-    def intToCommand(code: List[int]) -> List[AbstractCommand]:
+    def intToCommand(code: List[int]) -> List[Type[AbstractCommand]]:
         assert all([i >= 1 for i in code]), "Bad command encoding encountered!"
         return [COMMAND_REGISTRY[op - 1] for op in code]
 

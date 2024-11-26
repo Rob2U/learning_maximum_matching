@@ -1,9 +1,13 @@
-from typing import Any, List
+from typing import Any, List, Type
 
-from .structure_elements import Graph
 from .commands import AbstractCommand
+from .structure_elements import Graph
 
-def reward_naive(graph: Graph, program: List[AbstractCommand], result: Any) -> float:
-    """Naive feedback function for the MSTCodeEnvironment"""
+
+def reward_naive(
+    graph: Graph, program: List[Type[AbstractCommand]], result: Any
+) -> float:
+    """Naive feedback function for the MSTCodeEnvironment. Placeholder"""
     # We want to minimize the number of instructions
-    return result if result > 0.0 else 0.0
+    max_weight = max(graph.edges, key=lambda x: x.weight).weight
+    return max_weight - abs(max_weight - float(result))
