@@ -39,7 +39,7 @@ In the unlikely case that someone changed the environment.yml file, you can upda
 conda env update --file environment.yml --prune
 ```
 
-ENJOY! (using `python -m src.train`)
+ENJOY! (using `python ./src/train.py`)
 
 
 ## ToDos
