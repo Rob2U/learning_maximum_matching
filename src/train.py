@@ -19,8 +19,15 @@ if __name__ == "__main__":
     new_env: MSTCodeEnvironment = gym.make("MSTCode-v0")
     state, _ = new_env.reset()
     is_done = False
-    while not is_done:
+    is_truncated = False
+    curr_reward = 0
+    while not (is_done or is_truncated):
         action, _ = model.predict(observation=state)
-        state, _, is_done, _ = new_env.step(action)
+        state, curr_reward, is_done, is_truncated, _ = new_env.step(action)
 
-        print(Transpiler.intToCommand([action]))
+        print(Transpiler.intToCommand([action + 1])[0]())
+
+    print("Got a reward of ", curr_reward)
+    
+    env.close()
+    new_env.close()

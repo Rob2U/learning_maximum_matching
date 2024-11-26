@@ -39,17 +39,19 @@ from .vm_state import State
 class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):  # TODO(rob2u)
     def __init__(self) -> None:
         super().__init__()
+        self.max_code_length: int = 128
         self.vm: VirtualMachine
         # Attributes used by the gymnasium library
         self.action_space = gym.spaces.Discrete(  # type: ignore
             len(COMMAND_REGISTRY)
         )  # action_space contains all the possible instructions for the next line
-        self.observation_space = gym.spaces.Sequence(gym.spaces.Discrete(len(COMMAND_REGISTRY)))  # type: ignore
+        # self.observation_space = gym.spaces.Sequence(gym.spaces.Discrete(len(COMMAND_REGISTRY)))  # type: ignore
+        self.observation_space = gym.spaces.MultiDiscrete([len(COMMAND_REGISTRY) + 1] * self.max_code_length)
         # observation_space contains the current state of the VM (as we have full control over our VM)
-        self.metadata = {
-            "render.modes": [None],
-            "torch": True,
-        }  # metadata contains the render modes
+        # self.metadata = {
+        #     "render.modes": [],
+        #     "torch": True,
+        # }  # metadata contains the render modes
         # self.spec = None # spec contains the specification of the environment
 
         self.max_n = 50
@@ -60,14 +62,16 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):  # TODO(rob2u)
         self, action: int
     ) -> Tuple[npt.ArrayLike, float, bool, bool, Dict[str, Any]]:
         """Execute the action and return the new state, reward, and whether the episode is terminated and truncated"""
-        instruction = Transpiler.intToCommand([action])[0]
+        instruction = Transpiler.intToCommand([action + 1])[0]
         truncated = not self.vm.append_instruction(instruction)
         result, terminated = self.vm.run()
-        reward = reward_naive(self.vm.state.input, result)
+        reward = reward_naive(self.vm.state, self.vm.code, result)
 
         # NOTE(rob2u): might be worth trying to parse the entire return state of the VM + code
         observation = np.array(Transpiler.commandToInt(self.vm.code))
-
+        observation = np.concatenate([observation, (self.max_code_length  - len(observation) )* [0]])
+        assert observation.shape[0] == self.max_code_length, "Bad observation shape!"
+        
         return observation, reward, terminated, truncated, {}
 
     def reset(
@@ -83,13 +87,13 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):  # TODO(rob2u)
             random.seed(seed)
 
         n = random.randint(2, self.max_n)
-        m = random.randint(n - 1, self.max_m)
+        m = random.randint(n - 1, min(n * (n - 1) // 2, self.max_m))
 
         graph = generate_graph(n, m, seed=None)
-        self.vm = VirtualMachine([], graph)
+        self.vm = VirtualMachine([], graph, truncated_after=self.max_code_length)
 
         # NOTE(rob2u): might be worth trying to parse the entire state of the VM (as above)
-        return np.array([]), {}
+        return np.array([0] * self.max_code_length), {}
 
     def close(self) -> None:
         pass
@@ -102,10 +106,10 @@ class VirtualMachine:
     See instruction_set.md for more info.
     """
 
-    def __init__(self, code: List[AbstractCommand], input: Graph):
+    def __init__(self, code: List[AbstractCommand], input: Graph, truncated_after: int = 1000):
         self.code = code
         self.state = State(input)
-        self.truncation = 1000  # Maximum number of instructions before truncating
+        self.truncated_after = truncated_after  # Maximum number of instructions before truncating
         self.timeout = (len(input.edges) * len(input.nodes)**2)  # we let it run for a quite a while
 
     def run(self) -> Tuple[int, bool]:
@@ -113,7 +117,6 @@ class VirtualMachine:
         while self.state.pc < len(self.code):
             op = self.code[self.state.pc]()
             op.execute(self.state)
-            print(op)
 
             self.state.pc += 1
             if self.state.early_ret:
@@ -121,14 +124,13 @@ class VirtualMachine:
 
             execution_counter += 1
             if execution_counter > self.timeout:
-                print("Timeout")
                 break
 
         return int(self.state.ret_register), False
 
     def append_instruction(self, instruction: AbstractCommand) -> bool:
         """Add an instruction to the code if it is not too long. If it is too long, return False"""
-        if len(self.code) < self.truncation:
+        if len(self.code) < self.truncated_after:
             self.code.append(instruction)
             return True
         else:
@@ -166,11 +168,12 @@ class Transpiler:
 
     @staticmethod
     def commandToInt(code: List[AbstractCommand]) -> List[int]:
-        return [COMMAND_REGISTRY.index(op) for op in code]
+        return [COMMAND_REGISTRY.index(op) + 1 for op in code]
 
     @staticmethod
     def intToCommand(code: List[int]) -> List[AbstractCommand]:
-        return [COMMAND_REGISTRY[op] for op in code]
+        assert all([i >= 1 for i in code]), "Bad command encoding encountered!"
+        return [COMMAND_REGISTRY[op - 1] for op in code]
 
 
 if __name__ == "__main__":

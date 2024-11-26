@@ -1,9 +1,9 @@
-from typing import Any
+from typing import Any, List
 
 from .structure_elements import Graph
+from .commands import AbstractCommand
 
-
-def reward_naive(graph: Graph, result: Any) -> float:
+def reward_naive(graph: Graph, program: List[AbstractCommand], result: Any) -> float:
     """Naive feedback function for the MSTCodeEnvironment"""
     # We want to minimize the number of instructions
-    return 0.0 if len(result) > 10 else len(result)  # type: ignore
+    return result if result > 0.0 else 0.0
