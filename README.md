@@ -43,7 +43,10 @@ ENJOY! (using `python ./src/train.py`)
 
 
 ## ToDos
-- Write PRIM algorithm to prove that instruction set works (add adapt instruction set)
+- How to run environment.py? I get errors ImportError: attempted relative import with no known parent package
+- Write PRIM algorithm to prove that instruction set works (done but not tested)
+- Write PRIM algorithm with NodeEdgePointer stack, set, registers
+- Adapt instruction set to write Kruskal algorithm
 - Setup Reinforcement Learning framework (gymnasium adatper + stable-baselines)
 - Implement reward functions (given state return number)
 
