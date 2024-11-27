@@ -13,6 +13,8 @@ from .commands import (
     IF_IN_SET,
     IF_IS_NOT_FIRST_EDGE,
     IF_IS_NOT_FIRST_NODE,
+    IF_EDGE_STACK_EMPTY,
+    IF_EDGE_SET_FULL,
     JUMP,
     NEXT_EDGE,
     NEXT_NODE,
@@ -28,6 +30,12 @@ from .commands import (
     RET,
     TO_NEIGHBOR,
     WRITE_EDGE_WEIGHT,
+    PUSH_LEGAL_EDGES,
+    POP_EDGE,
+    RESET_EDGE_REGISTER,
+    WRITE_EDGE_REGISTER,
+    ADD_EDGE_TO_SET,
+    REMOVE_EDGE_FROM_SET,
     AbstractCommand,
 )
 from .feedback import reward_naive
@@ -176,6 +184,14 @@ COMMAND_REGISTRY: List[Type[AbstractCommand]] = [
     RESET_EDGE_WEIGHT,
     ADD_TO_OUT,
     IF_EDGE_WEIGHT_GT,
+    WRITE_EDGE_REGISTER,
+    RESET_EDGE_REGISTER,
+    POP_EDGE,
+    IF_EDGE_STACK_EMPTY,
+    PUSH_LEGAL_EDGES,
+    ADD_EDGE_TO_SET,
+    REMOVE_EDGE_FROM_SET,
+    IF_EDGE_SET_FULL,
 ]
 
 
@@ -194,18 +210,25 @@ class Transpiler:
 
 if __name__ == "__main__":
     # Lets write PRIM algorithm in our instruction set
-    test_graph = generate_graph(10, 20)
+    test_graph = generate_graph(4, 6)
 
     code = [
-        PUSH_START_NODE,
-        ADD_TO_SET,
         PUSH_MARK,  # LOOP START
-        PUSH_HEAP,
-        NEXT_NODE,
-        IF_IS_NOT_FIRST_NODE,  # LOOP END CONDITION
-        JUMP,
+            PUSH_LEGAL_EDGES, # push stack of edges that are allowed to be added
+            RESET_EDGE_REGISTER,
+
+            PUSH_MARK,  # INNER LOOP START 
+                IF_EDGE_WEIGHT_GT, # if top of edge stack is greater than edge register
+                    WRITE_EDGE_REGISTER, # update edge register to edge on top of stack
+                POP_EDGE, # pop edge from edge stack
+                IF_EDGE_STACK_EMPTY,  # INNER LOOP END CONDITION: if edge stack is empty
+                    JUMP, # to INNER LOOP START
+                ADD_EDGE_TO_SET, # final command before inner loop ends: add the edge from our edge register to the set
+            POP_MARK, # INNER LOOP END
+
+            IF_EDGE_SET_FULL,  # LOOP END CONDITION: if n - 1 edges have been marked
+                JUMP, # to LOOP START
         POP_MARK,  # LOOP END
-        RET,
     ]
 
     vm = VirtualMachine(code, test_graph)

@@ -1,6 +1,7 @@
 import heapq
 from abc import ABC, abstractmethod
 
+from .union_find import UnionFind
 from .structure_elements import NodeEdgePointer
 from .vm_state import State
 
@@ -144,6 +145,129 @@ class POP_NODE(AbstractCommand):
 
     def __str__(self) -> str:
         return "POP_NODE"
+
+
+class PUSH_LEGAL_EDGES(AbstractCommand):
+    """Pushes all edges to the edge_stack that would be valid to add to a MST. 
+    We view the edges in the edge_set as the current MST.
+    Initially (i.e. edge_set is empty), all edges are legal.
+    Otherwise, all edges that are not yet part of the MST and do not create a cycle are legal.
+    """
+
+    def execute(self, state: State) -> None:
+        if len(state.edge_set) == 0:
+            # initially all edges are legal
+            state.edge_stack += state.input.edges
+        else:
+            # its quite inefficient to always rebuild the union find when this command is called. Instead: union find could be updated every time edge_set is updated.
+            uf = UnionFind(len(state.input.nodes))
+            for e in state.edge_set:
+                uf.union(e.u, e.v)
+
+            for edge in state.input.edges:
+                # legal edges are  all edges that are not already in the edge set and do not create a cycle (checked with union find data structure)
+                if edge not in state.edge_set and not uf.connected(edge.u, edge.v):
+                    state.edge_stack.append(edge)
+
+    def is_applicable(self, state: State) -> bool:
+        return True
+
+    def is_comparison(self) -> bool:
+        return False
+
+    def __str__(self) -> str:
+        return "PUSH_LEGAL_EDGES"
+
+
+class PUSH_EDGE(AbstractCommand):
+    def execute(self, state: State) -> None:
+        if state.edge_register:
+            state.edge_stack.append(state.edge_register)
+
+    def is_applicable(self, state: State) -> bool:
+        return True # if edge_register is None, we do nothing.
+
+    def is_comparison(self) -> bool:
+        return False
+
+    def __str__(self) -> str:
+        return "PUSH_EDGE"
+
+
+class POP_EDGE(AbstractCommand):
+    def execute(self, state: State) -> None:
+        if len(state.edge_stack) > 0:
+            state.edge_stack.pop()
+
+    def is_applicable(self, state: State) -> bool:
+        # if the edge_stack is already empty we do nothing. Therefore, always applicable.
+        return True
+
+    def is_comparison(self) -> bool:
+        return False
+
+    def __str__(self) -> str:
+        return "POP_EDGE"
+
+
+class IF_EDGE_STACK_EMPTY(AbstractCommand):
+    def execute(self, state: State) -> None:
+        if len(state.edge_stack) > 0:
+            state.pc += 1
+
+    def is_applicable(self, state: State) -> bool:
+        return True
+
+    def is_comparison(self) -> bool:
+        return True
+
+    def __str__(self) -> str:
+        return "IF_EDGE_STACK_EMPTY"
+
+
+class ADD_EDGE_TO_SET(AbstractCommand):
+    def execute(self, state: State) -> None:
+        if state.edge_register:
+            state.edge_set.add(state.edge_register)
+    
+    def is_applicable(self, state: State) -> bool:
+        return state.edge_register is not None
+    
+    def is_comparison(self) -> bool:
+        return False
+    
+    def __str__(self) -> str:
+        return "ADD_EDGE_TO_SET"
+
+
+class REMOVE_EDGE_FROM_SET(AbstractCommand):
+    def execute(self, state: State) -> None:
+        if state.edge_register:
+            state.edge_set.remove(state.edge_register)
+
+    def is_applicable(self, state: State) -> bool:
+        return state.edge_register is not None
+
+    def is_comparison(self) -> bool:
+        return False
+
+    def __str__(self) -> str:
+        return "REMOVE_EDGE_FROM_SET"
+
+
+class IF_EDGE_SET_FULL(AbstractCommand):
+    def execute(self, state: State) -> None:
+        if len(state.edge_set) < len(state.input.nodes) - 1:
+            state.pc += 1
+
+    def is_applicable(self, state: State) -> bool:
+        return True
+
+    def is_comparison(self) -> bool:
+        return True
+
+    def __str__(self) -> str:
+        return "IF_EDGE_SET_FULL"
 
 
 class ADD_TO_SET(AbstractCommand):
@@ -313,6 +437,34 @@ class IF_IS_NOT_FIRST_EDGE(AbstractCommand):
         return "IF_IS_NOT_FIRST_EDGE"
 
 
+class WRITE_EDGE_REGISTER(AbstractCommand):
+    def execute(self, state: State) -> None:
+        state.edge_register = state.edge_stack[-1]
+
+    def is_applicable(self, state: State) -> bool:
+        return len(state.stack) > 0
+
+    def is_comparison(self) -> bool:
+        return False
+
+    def __str__(self) -> str:
+        return "WRITE_EDGE_REGISTER"
+
+
+class RESET_EDGE_REGISTER(AbstractCommand):
+    def execute(self, state: State) -> None:
+        state.edge_register = None
+
+    def is_applicable(self, state: State) -> bool:
+        return True
+
+    def is_comparison(self) -> bool:
+        return False
+
+    def __str__(self) -> str:
+        return "RESET_EDGE_REGISTER"
+
+
 class WRITE_EDGE_WEIGHT(AbstractCommand):
     def execute(self, state: State) -> None:
         if state.stack:
@@ -359,7 +511,7 @@ class ADD_TO_OUT(AbstractCommand):
 
 class IF_EDGE_WEIGHT_GT(AbstractCommand):
     def execute(self, state: State) -> None:
-        if state.stack and state.value_register >= state.stack[-1].edge.weight:
+        if len(state.edge_stack) > 0 and state.edge_register and state.edge_register.weight >= state.edge_stack[-1].weight:
             state.pc += 1
 
     def is_applicable(self, state: State) -> bool:
