@@ -45,6 +45,8 @@ class State:
         self.stack = []
         self.set = set()
         self.heap = []
+        self.edge_set = set()
+        self.edge_stack = []
 
         self.ret_register = -1
         self.value_register = -1
