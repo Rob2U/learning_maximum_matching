@@ -35,5 +35,6 @@ def compute_mst(graph: Graph) -> Set[Edge]:
     G = nx.Graph()
     for edge in graph.edges:
         G.add_edge(edge.u, edge.v, weight=edge.weight)
+
     mst_edges = nx.minimum_spanning_edges(G, data=False)
-    return {Edge(u, v, G[u][v]["weight"]) for u, v in mst_edges}
+    return {graph.get_edge_undirected(u, v) for u, v in mst_edges} # type: ignore
