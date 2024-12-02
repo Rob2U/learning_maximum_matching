@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 
 # Weighted Edge
@@ -67,8 +67,8 @@ class Graph:
     def __str__(self) -> str:
         # print as adjacency matrix
         n = len(self.nodes)
-        matrix = [[0 for _ in range(n)] for _ in range(n)]
+        matrix: List[List[Optional[int]]] = [[None for _ in range(n)] for _ in range(n)]
         for edge in self.edges:
             matrix[edge.u][edge.v] = edge.weight
             matrix[edge.v][edge.u] = edge.weight
-        return "\n".join([" ".join(map(str, row)) for row in matrix])
+        return "\n".join([" ".join([str(w) if w is not None else "-" for w in row]) for row in matrix])
