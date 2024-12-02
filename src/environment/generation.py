@@ -57,13 +57,16 @@ def generate_graph(
         edges_in_tree += 1
 
     weight_max = m
-    random.shuffle(graph.edges)
+    random.shuffle(graph.edges)  # first shuffle for random order of min max edges
     for edge in graph.edges:
         if distinct_weights:
             edge.weight = weight_max
             weight_max -= 1
         else:
-            edge.weight = random.randint(1, m)
+            edge.weight = random.randint(
+                1, m
+            )  # second shuffle to prevent g.edges to be sorted
+    random.shuffle(graph.edges)
 
     return graph
 
