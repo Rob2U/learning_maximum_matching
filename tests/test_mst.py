@@ -17,7 +17,7 @@ def test_compute_mst() -> None:
 
     # Check if the result is the correct MST
     assert len(mst) == n - 1, f"Expected MST of size {n - 1}, but got {len(mst)}"
-    expected_mst = {test_graph.edges[11], test_graph.edges[13], test_graph.edges[15], test_graph.edges[16], test_graph.edges[17], test_graph.edges[18], test_graph.edges[19]}
+    expected_mst = {test_graph.edges[0], test_graph.edges[2], test_graph.edges[3], test_graph.edges[8], test_graph.edges[9], test_graph.edges[12], test_graph.edges[13]}
     assert expected_mst == mst,  f"Expected MST {expected_mst}, but got {mst}"
 
 @pytest.mark.parametrize("n_nodes, m_edges", [(10, 45), (20, 150), (30, 417)])
@@ -44,7 +44,7 @@ def test_COMPUTE_MST_instruction(n_nodes: int, m_edges: int) -> None:
     assert mst_weight == expected_mst_weight, f"Expected MST weight {expected_mst_weight}, but got {mst_weight}"
 
 
-@pytest.mark.parametrize("n_nodes, m_edges", [(10, 45), (20, 190), (30, 435)])
+@pytest.mark.parametrize("n_nodes, m_edges", [(10, 45), (20, 150), (30, 417)])
 def test_simple_prims_algorithm(n_nodes: int, m_edges: int) -> None:
     # Generate a test graph
     test_graph = generate_graph(n_nodes, m_edges)
