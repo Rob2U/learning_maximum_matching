@@ -235,10 +235,9 @@ class IF_EDGE_WEIGHT_LT(ConditionalCommand):
     """Compares the weight of the edge on the stack with the value register. If the weight is less than the value register, the next command is executed."""
 
     def condition(self, state: State) -> bool:
-        return (
-            len(state.edge_stack) == 0
-            or not state.edge_register
-            or state.edge_register.weight < state.edge_stack[-1].weight
+        return not state.edge_register or (
+            len(state.edge_stack) > 0
+            and state.edge_stack[-1].weight < state.edge_register.weight
         )
 
     def __str__(self) -> str:
