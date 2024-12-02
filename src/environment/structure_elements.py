@@ -1,8 +1,8 @@
 from typing import List, Optional
 
 
-# Weighted Edge
 class Edge:
+    """Weighted edge in a graph"""
     def __init__(self, u: int, v: int, weight: int = 1):
         self.u = u
         self.v = v
@@ -45,6 +45,12 @@ class Graph:
         return any(edge.has_nodes(u, v) for edge in self.edges) or any(
             edge.has_nodes(v, u) for edge in self.edges
         )
+
+    def get_edge_undirected(self, u: int, v: int) -> Optional[Edge]:
+        for edge in self.edges:
+            if edge.has_nodes(u, v) or edge.has_nodes(v, u):
+                return edge
+        return None
 
     def first_node(self) -> int:
         if not self.nodes:
