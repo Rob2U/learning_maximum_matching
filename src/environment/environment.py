@@ -150,7 +150,7 @@ class VirtualMachine:
 
         return (
             self.state.edge_set,  # int(self.state.ret_register),
-            execution_counter > self.timeout or self.state.early_ret,
+            execution_counter > self.timeout,
         )
 
     def append_instruction(self, instruction: Type[AbstractCommand]) -> bool:
