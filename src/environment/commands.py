@@ -1,7 +1,7 @@
 import heapq
 from abc import ABC, abstractmethod
 
-from .union_find import UnionFind
+from .algorithms import UnionFind, compute_mst
 from .structure_elements import NodeEdgePointer
 from .vm_state import State
 
@@ -210,9 +210,9 @@ class POP_EDGE(AbstractCommand):
         return "POP_EDGE"
 
 
-class IF_EDGE_STACK_EMPTY(AbstractCommand):
+class IF_EDGE_STACK_REMAINING(AbstractCommand):
     def execute(self, state: State) -> None:
-        if len(state.edge_stack) > 0:
+        if len(state.edge_stack) == 0:
             state.pc += 1
 
     def is_applicable(self, state: State) -> bool:
@@ -222,7 +222,7 @@ class IF_EDGE_STACK_EMPTY(AbstractCommand):
         return True
 
     def __str__(self) -> str:
-        return "IF_EDGE_STACK_EMPTY"
+        return "IF_EDGE_STACK_REMAINING"
 
 
 class ADD_EDGE_TO_SET(AbstractCommand):
@@ -255,9 +255,9 @@ class REMOVE_EDGE_FROM_SET(AbstractCommand):
         return "REMOVE_EDGE_FROM_SET"
 
 
-class IF_EDGE_SET_FULL(AbstractCommand):
+class IF_EDGE_SET_CAPACITY_REMAINING(AbstractCommand):
     def execute(self, state: State) -> None:
-        if len(state.edge_set) < len(state.input.nodes) - 1:
+        if not (len(state.edge_set) < len(state.input.nodes) - 1):
             state.pc += 1
 
     def is_applicable(self, state: State) -> bool:
@@ -267,7 +267,7 @@ class IF_EDGE_SET_FULL(AbstractCommand):
         return True
 
     def __str__(self) -> str:
-        return "IF_EDGE_SET_FULL"
+        return "IF_EDGE_SET_CAPACITY_REMAINING"
 
 
 class ADD_TO_SET(AbstractCommand):
@@ -509,7 +509,7 @@ class ADD_TO_OUT(AbstractCommand):
         return "ADD_TO_OUT"
 
 
-class IF_EDGE_WEIGHT_GT(AbstractCommand):
+class IF_EDGE_WEIGHT_LT(AbstractCommand):
     def execute(self, state: State) -> None:
         if len(state.edge_stack) > 0 and state.edge_register and state.edge_register.weight >= state.edge_stack[-1].weight:
             state.pc += 1
@@ -522,6 +522,21 @@ class IF_EDGE_WEIGHT_GT(AbstractCommand):
 
     def __str__(self) -> str:
         return "IF_EDGE_WEIGHT_GT"
+
+
+# This is a cheat command. can be used for testing.
+class COMPUTE_MST(AbstractCommand):
+    def execute(self, state: State) -> None:
+        state.edge_set = compute_mst(state.input)
+    
+    def is_applicable(self, state: State) -> bool:
+        return True
+
+    def is_comparison(self) -> bool:
+        return False
+    
+    def __str__(self) -> str:
+        return "COMPUTE_MST"
 
 
 # class IF_EQ(AbstractCommand):

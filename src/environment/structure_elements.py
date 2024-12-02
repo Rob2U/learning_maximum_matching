@@ -63,3 +63,12 @@ class Graph:
     def next_edge(self, node: int, edge: Edge) -> Edge:
         edges = [e for e in self.edges if e.u == node or e.v == node]
         return edges[(edges.index(edge) + 1) % len(edges)]
+
+    def __str__(self) -> str:
+        # print as adjacency matrix
+        n = len(self.nodes)
+        matrix = [[0 for _ in range(n)] for _ in range(n)]
+        for edge in self.edges:
+            matrix[edge.u][edge.v] = edge.weight
+            matrix[edge.v][edge.u] = edge.weight
+        return "\n".join([" ".join(map(str, row)) for row in matrix])

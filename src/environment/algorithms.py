@@ -1,3 +1,8 @@
+import networkx as nx
+from typing import Set
+
+from .structure_elements import Graph, Edge
+
 class UnionFind:
     def __init__(self, n: int):
         self.parent = list(range(n))
@@ -22,3 +27,10 @@ class UnionFind:
 
     def connected(self, u: int, v: int) -> bool:
         return self.find(u) == self.find(v)
+
+def compute_mst(graph: Graph) -> Set[Edge]:
+    G = nx.Graph()
+    for edge in graph.edges:
+        G.add_edge(edge.u, edge.v, weight=edge.weight)
+    mst_edges = nx.minimum_spanning_edges(G, data=False)
+    return {Edge(u, v, G[u][v]['weight']) for u, v in mst_edges}

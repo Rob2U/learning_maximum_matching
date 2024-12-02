@@ -1,5 +1,5 @@
 import random
-from typing import Any, Dict, List, Tuple, Type
+from typing import Any, Dict, List, Tuple, Type, Set
 
 import gymnasium as gym
 import numpy as np
@@ -8,13 +8,13 @@ import numpy.typing as npt
 from .commands import (
     ADD_TO_OUT,
     ADD_TO_SET,
-    IF_EDGE_WEIGHT_GT,
+    IF_EDGE_WEIGHT_LT,
     IF_HEAP_EMPTY,
     IF_IN_SET,
     IF_IS_NOT_FIRST_EDGE,
     IF_IS_NOT_FIRST_NODE,
-    IF_EDGE_STACK_EMPTY,
-    IF_EDGE_SET_FULL,
+    IF_EDGE_STACK_REMAINING,
+    IF_EDGE_SET_CAPACITY_REMAINING,
     JUMP,
     NEXT_EDGE,
     NEXT_NODE,
@@ -40,7 +40,7 @@ from .commands import (
 )
 from .feedback import reward_naive
 from .generation import generate_graph
-from .structure_elements import Graph
+from .structure_elements import Graph, Edge
 from .vm_state import State
 
 
@@ -75,7 +75,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):  # TODO(rob2u)
         instruction = Transpiler.intToCommand([action + 1])[0]
         truncated = not self.vm.append_instruction(instruction)
         result, terminated = self.vm.run()
-        reward = reward_naive(self.vm.state.input, self.vm.code, result)
+        reward = reward_naive(self.vm.state.input, self.vm.code, result, terminated)
 
         # NOTE(rob2u): might be worth trying to parse the entire return state of the VM + code
         observation: npt.NDArray[int, 1] = np.array(Transpiler.commandToInt(self.vm.code))  # type: ignore
@@ -123,6 +123,7 @@ class VirtualMachine:
         code: List[Type[AbstractCommand]],
         input: Graph,
         truncated_after: int = 1000,
+        verbose: bool = False,
     ):
         self.code = code
         self.state = State(input)
@@ -130,13 +131,15 @@ class VirtualMachine:
             truncated_after  # Maximum number of instructions before truncating
         )
         self.timeout = (
-            len(input.edges) * len(input.nodes) ** 2
+            100 + len(input.edges) * len(input.nodes) ** 2
         )  # we let it run for a quite a while
+        self.verbose = verbose
 
-    def run(self) -> Tuple[int, bool]:
+    def run(self) -> Tuple[Set[Edge], bool]:
         execution_counter = 0
         while self.state.pc < len(self.code):
             op = self.code[self.state.pc]()  # type: ignore
+            self.log(op)
             op.execute(self.state)
 
             self.state.pc += 1
@@ -148,7 +151,7 @@ class VirtualMachine:
                 break
 
         return (
-            int(self.state.ret_register),
+            self.state.edge_set,  # int(self.state.ret_register),
             execution_counter > self.timeout or self.state.early_ret,
         )
 
@@ -159,6 +162,10 @@ class VirtualMachine:
             return True
         else:
             return False
+
+    def log(self, item: Any) -> None:
+        if self.verbose:
+            print(item)
 
 
 COMMAND_REGISTRY: List[Type[AbstractCommand]] = [
@@ -183,15 +190,15 @@ COMMAND_REGISTRY: List[Type[AbstractCommand]] = [
     WRITE_EDGE_WEIGHT,
     RESET_EDGE_WEIGHT,
     ADD_TO_OUT,
-    IF_EDGE_WEIGHT_GT,
+    IF_EDGE_WEIGHT_LT,
     WRITE_EDGE_REGISTER,
     RESET_EDGE_REGISTER,
     POP_EDGE,
-    IF_EDGE_STACK_EMPTY,
+    IF_EDGE_STACK_REMAINING,
     PUSH_LEGAL_EDGES,
     ADD_EDGE_TO_SET,
     REMOVE_EDGE_FROM_SET,
-    IF_EDGE_SET_FULL,
+    IF_EDGE_SET_CAPACITY_REMAINING,
 ]
 
 
@@ -210,7 +217,10 @@ class Transpiler:
 
 if __name__ == "__main__":
     # Lets write PRIM algorithm in our instruction set
-    test_graph = generate_graph(4, 6)
+    test_graph = generate_graph(10, 45)
+    print("##################")
+    print("Graph:")
+    print(test_graph)
 
     code = [
         PUSH_MARK,  # LOOP START
@@ -218,18 +228,49 @@ if __name__ == "__main__":
             RESET_EDGE_REGISTER,
 
             PUSH_MARK,  # INNER LOOP START 
-                IF_EDGE_WEIGHT_GT, # if top of edge stack is greater than edge register
+                IF_EDGE_WEIGHT_LT, # if top of edge stack is greater than edge register
                     WRITE_EDGE_REGISTER, # update edge register to edge on top of stack
                 POP_EDGE, # pop edge from edge stack
-                IF_EDGE_STACK_EMPTY,  # INNER LOOP END CONDITION: if edge stack is empty
+                IF_EDGE_STACK_REMAINING,  # INNER LOOP END CONDITION: if edge stack is empty
                     JUMP, # to INNER LOOP START
                 ADD_EDGE_TO_SET, # final command before inner loop ends: add the edge from our edge register to the set
             POP_MARK, # INNER LOOP END
 
-            IF_EDGE_SET_FULL,  # LOOP END CONDITION: if n - 1 edges have been marked
+            IF_EDGE_SET_CAPACITY_REMAINING,  # LOOP END CONDITION: if n - 1 edges have been marked
                 JUMP, # to LOOP START
         POP_MARK,  # LOOP END
     ]
+    
+    print("##################")
+    print("Code:")
+    print(
+        "\n".join(
+            [
+                f"{i + 1}: {op.__name__}"
+                for i, op in enumerate(code)
+            ]
+        )
+    )
+    
+    print("##################")
+    print("Stack Trace:")
 
-    vm = VirtualMachine(code, test_graph)
-    print(vm.run())
+    vm = VirtualMachine(code, test_graph, verbose=True)
+    
+    print("##################")
+    print("Graph:")
+    print(test_graph)
+
+    print("##################")
+    result, infinite = vm.run()
+    print("##################")
+
+    if infinite:
+        print("Stack Overflow! Max instructions reached.")
+    else:
+        print("Result:")
+        print(result)
+
+        print("##################")
+        print("Actual MST:")
+        print(vm.state.edge_set)
