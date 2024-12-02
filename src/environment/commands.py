@@ -234,15 +234,12 @@ class IF_EDGE_STACK_REMAINING(ConditionalCommand):
 class IF_EDGE_WEIGHT_LT(ConditionalCommand):
     """Compares the weight of the edge on the stack with the value register. If the weight is less than the value register, the next command is executed."""
 
-    def command(self, state: State) -> bool:
+    def condition(self, state: State) -> bool:
         return (
             len(state.edge_stack) == 0
             or not state.edge_register
             or state.edge_register.weight < state.edge_stack[-1].weight
         )
-
-    def is_applicable(self, state: State) -> bool:
-        return state.value_register != -1 and len(state.stack) > 0
 
     def __str__(self) -> str:
         return "IF_EDGE_WEIGHT_LT"
@@ -476,7 +473,7 @@ class POP_HEAP(AbstractCommand):
         return "POP_HEAP"
 
 
-class IF_HEAP_EMPTY(AbstractCommand):
+class IF_HEAP_EMPTY(ConditionalCommand):
     def condition(self, state: State) -> bool:
         return len(state.heap) == 0
 
