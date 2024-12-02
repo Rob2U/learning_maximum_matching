@@ -7,10 +7,8 @@ import numpy.typing as npt
 
 from .commands import (
     ADD_TO_OUT,
-    ADD_TO_SET,
     IF_EDGE_WEIGHT_LT,
     IF_HEAP_EMPTY,
-    IF_IN_SET,
     IF_IS_NOT_FIRST_EDGE,
     IF_IS_NOT_FIRST_NODE,
     IF_EDGE_STACK_REMAINING,
@@ -177,8 +175,6 @@ COMMAND_REGISTRY: List[Type[AbstractCommand]] = [
     PUSH_START_NODE,
     PUSH_CLONE_NODE,
     POP_NODE,
-    ADD_TO_SET,
-    IF_IN_SET,
     PUSH_HEAP,
     POP_HEAP,
     IF_HEAP_EMPTY,
