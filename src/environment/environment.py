@@ -167,7 +167,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         mask = np.zeros(len(COMMAND_REGISTRY), dtype=int)
 
         for i, Command in enumerate(COMMAND_REGISTRY):
-            mask[i] = Command().is_applicable(self.vm.vm_state)
+            mask[i] = Command().is_applicable(self.vms[0].vm_state)
 
         return mask
 

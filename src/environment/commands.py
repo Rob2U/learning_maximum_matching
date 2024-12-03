@@ -1,13 +1,13 @@
 import heapq
 from abc import abstractmethod
-from typing import Type, List
+from typing import List, Type
 
 from .algorithms import UnionFind, compute_mst
 from .structure_elements import NodeEdgePointer
 from .vm_state import AbstractCommand, VMState
 
-
 ############### ABSTRACT COMMANDS ####################
+
 
 class ConditionalCommand(AbstractCommand):
     """Abstract class for commands that are conditionals."""
@@ -30,6 +30,7 @@ class ConditionalCommand(AbstractCommand):
 
 
 ############### GENERAL COMMANDS ####################
+
 
 class NOP(AbstractCommand):
     def execute(self, state: VMState) -> None:
@@ -61,6 +62,7 @@ class RET(AbstractCommand):
 
 
 ############### MARKS + JUMPS FOR LOOPS ####################
+
 
 class PUSH_MARK(AbstractCommand):
     """Adds a code marker at the position of the current pc. Using JUMP we can loop back to this position later."""
@@ -109,6 +111,7 @@ class JUMP(AbstractCommand):
 
 
 ################# EDGE REGISTER COMMANDS ####################
+
 
 class WRITE_EDGE_REGISTER(AbstractCommand):
     def execute(self, state: VMState) -> None:
@@ -262,6 +265,7 @@ class IF_EDGE_WEIGHT_LT(ConditionalCommand):
 
 ################### VALUE AND RETURN REGISTER COMMANDS ####################
 # Currently not needed but could be useful for future extensions
+
 
 class WRITE_EDGE_WEIGHT(AbstractCommand):
     def execute(self, state: VMState) -> None:
@@ -517,6 +521,7 @@ class IF_HEAP_EMPTY(ConditionalCommand):
 ################ "CHEAT" COMMANDS FOR MST ################
 # ordered in ascending order by how much they "cheat" (i.e. how much of the problem they solve on a non-atomic-instruction level)
 
+
 class IF_EDGE_SET_CAPACITY_REMAINING(ConditionalCommand):
     """This is also kind of cheating as it computes the end condition for MST directly."""
 
@@ -593,19 +598,19 @@ CONDITIONAL_COMMANDS: List[Type[AbstractCommand]] = [
 
 
 def does_any_command_exist(
-    code: List[AbstractCommand], Commands: List[Type[AbstractCommand]]
+    code: List[Type[AbstractCommand]], Commands: List[Type[AbstractCommand]]
 ) -> bool:
     return any(does_command_exist(code, Command) for Command in Commands)
 
 
 def does_command_exist(
-    code: List[AbstractCommand], Command: Type[AbstractCommand]
+    code: List[Type[AbstractCommand]], Command: Type[AbstractCommand]
 ) -> bool:
     return any(isinstance(c, Command) for c in code)
 
 
 def are_last_n_commands_different_to_all(
-    code: List[AbstractCommand], Commands: List[Type[AbstractCommand]], n: int
+    code: List[Type[AbstractCommand]], Commands: List[Type[AbstractCommand]], n: int
 ) -> bool:
     return all(
         is_last_command_different_to_all(code[min(0, -i) :], Commands) for i in range(n)
@@ -613,12 +618,12 @@ def are_last_n_commands_different_to_all(
 
 
 def is_last_command_different_to_all(
-    code: List[AbstractCommand], Commands: List[Type[AbstractCommand]]
+    code: List[Type[AbstractCommand]], Commands: List[Type[AbstractCommand]]
 ) -> bool:
     return all(is_last_command_different_to(code, Command) for Command in Commands)
 
 
 def is_last_command_different_to(
-    code: List[AbstractCommand], Command: Type[AbstractCommand]
+    code: List[Type[AbstractCommand]], Command: Type[AbstractCommand]
 ) -> bool:
     return len(code) == 0 or not isinstance(code[-1], Command)

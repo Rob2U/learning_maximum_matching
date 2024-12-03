@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, List, Set
+from typing import List, Set
 
 from .structure_elements import Edge, Graph, NodeEdgePointer
 
