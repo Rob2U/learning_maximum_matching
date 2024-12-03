@@ -39,3 +39,4 @@ dependencies:
       - print-on-steroids[exceptions]
       - wandb[sweeps]
       - stable-baselines3
+      - sb3-contrib
