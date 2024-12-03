@@ -1,9 +1,8 @@
-from typing import Any, List, Set, Type
+from typing import Set
 
-from .algorithms import UnionFind, compute_mst
+from .algorithms import compute_mst
 from .code_state import CodeState
-from .commands import AbstractCommand
-from .structure_elements import Edge, Graph
+from .structure_elements import Edge
 from .vm_state import VMState
 
 
