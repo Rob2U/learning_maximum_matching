@@ -1,8 +1,9 @@
-from typing import List
+from typing import List, Optional
 
 
-# Weighted Edge
 class Edge:
+    """Weighted edge in a graph"""
+
     def __init__(self, u: int, v: int, weight: int = 1):
         self.u = u
         self.v = v
@@ -46,6 +47,12 @@ class Graph:
             edge.has_nodes(v, u) for edge in self.edges
         )
 
+    def get_edge_undirected(self, u: int, v: int) -> Optional[Edge]:
+        for edge in self.edges:
+            if edge.has_nodes(u, v) or edge.has_nodes(v, u):
+                return edge
+        return None
+
     def first_node(self) -> int:
         if not self.nodes:
             raise ValueError("Graph has no nodes")
@@ -67,8 +74,13 @@ class Graph:
     def __str__(self) -> str:
         # print as adjacency matrix
         n = len(self.nodes)
-        matrix = [[0 for _ in range(n)] for _ in range(n)]
+        matrix: List[List[Optional[int]]] = [[None for _ in range(n)] for _ in range(n)]
         for edge in self.edges:
             matrix[edge.u][edge.v] = edge.weight
             matrix[edge.v][edge.u] = edge.weight
-        return "\n".join([" ".join(map(str, row)) for row in matrix])
+        return "\n".join(
+            [
+                " ".join([str(w) if w is not None else "-" for w in row])
+                for row in matrix
+            ]
+        )

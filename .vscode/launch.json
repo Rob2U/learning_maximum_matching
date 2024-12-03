@@ -1,10 +1,12 @@
 {
+  "version": "0.2.0",
   "configurations": [
     {
       "type": "debugpy",
       "request": "launch",
       "name": "Launch Train Script",
-      "program": "${workspaceFolder}/src/train.py"
+      "program": "${workspaceFolder}/src/train.py",
+      "purpose": ["debug-test"]
     }
   ]
 }
