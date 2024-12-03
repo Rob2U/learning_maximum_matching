@@ -1,9 +1,9 @@
 from typing import List, Set
 
-from .structure_elements import Graph, NodeEdgePointer, Edge
+from .structure_elements import Edge, Graph, NodeEdgePointer
 
 
-class State:
+class VMState:
     """Current state of the virtual machine
 
     Attributes:
@@ -15,7 +15,6 @@ class State:
     ret_register: Return register
     value_register: Value register
     early_ret: Flag for early return
-
     """
 
     input: Graph
@@ -33,7 +32,11 @@ class State:
     heap: List[NodeEdgePointer]
     ret_register: int
     value_register: int
+
     early_ret: bool
+    execution_counter: int
+
+    timeout: bool
 
     def __init__(self, input: Graph):
         self.input = input

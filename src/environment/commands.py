@@ -3,16 +3,16 @@ from abc import ABC, abstractmethod
 
 from .algorithms import UnionFind, compute_mst
 from .structure_elements import NodeEdgePointer
-from .vm_state import State
+from .vm_state import VMState
 
 
 class AbstractCommand(ABC):
     @abstractmethod
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         pass
 
     @abstractmethod
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         pass
 
     @abstractmethod  # NOTE(rob2u): not sure if necessary
@@ -25,10 +25,10 @@ class AbstractCommand(ABC):
 
 
 class NOP(AbstractCommand):
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         pass
 
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         return True
 
     def is_comparison(self) -> bool:
@@ -39,10 +39,10 @@ class NOP(AbstractCommand):
 
 
 class RET(AbstractCommand):
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         state.early_ret = True
 
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         return True
 
     def is_comparison(self) -> bool:
@@ -53,10 +53,10 @@ class RET(AbstractCommand):
 
 
 class PUSH_MARK(AbstractCommand):
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         state.mark_stack.append(state.pc - 1)
 
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         return True
 
     def is_comparison(self) -> bool:
@@ -67,11 +67,11 @@ class PUSH_MARK(AbstractCommand):
 
 
 class POP_MARK(AbstractCommand):
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         if state.mark_stack:
             state.mark_stack.pop()
 
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         return True
 
     def is_comparison(self) -> bool:
@@ -82,11 +82,11 @@ class POP_MARK(AbstractCommand):
 
 
 class JUMP(AbstractCommand):
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         if state.mark_stack:
             state.pc = state.mark_stack.pop()
 
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         return True
 
     def is_comparison(self) -> bool:
@@ -97,13 +97,13 @@ class JUMP(AbstractCommand):
 
 
 class PUSH_START_NODE(AbstractCommand):
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         first_node = state.input.first_node()
         state.stack.append(
             NodeEdgePointer(first_node, state.input.first_edge(first_node))
         )
 
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         return True
 
     def is_comparison(self) -> bool:
@@ -114,14 +114,14 @@ class PUSH_START_NODE(AbstractCommand):
 
 
 class PUSH_CLONE_NODE(AbstractCommand):
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         if state.stack:
             clone_node = state.stack[-1].node
             state.stack.append(
                 NodeEdgePointer(clone_node, state.input.first_edge(clone_node))
             )
 
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         # NOTE(rob2u): we replace PUSH_START_NODE by using this but putting the start_node on the stack if empty
         return len(state.stack) > 0
 
@@ -133,11 +133,11 @@ class PUSH_CLONE_NODE(AbstractCommand):
 
 
 class POP_NODE(AbstractCommand):
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         if state.stack:
             state.stack.pop()
 
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         return len(state.stack) > 0
 
     def is_comparison(self) -> bool:
@@ -148,13 +148,13 @@ class POP_NODE(AbstractCommand):
 
 
 class PUSH_LEGAL_EDGES(AbstractCommand):
-    """Pushes all edges to the edge_stack that would be valid to add to a MST. 
+    """Pushes all edges to the edge_stack that would be valid to add to a MST.
     We view the edges in the edge_set as the current MST.
     Initially (i.e. edge_set is empty), all edges are legal.
     Otherwise, all edges that are not yet part of the MST and do not create a cycle are legal.
     """
 
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         if len(state.edge_set) == 0:
             # initially all edges are legal
             state.edge_stack += state.input.edges
@@ -169,7 +169,7 @@ class PUSH_LEGAL_EDGES(AbstractCommand):
                 if edge not in state.edge_set and not uf.connected(edge.u, edge.v):
                     state.edge_stack.append(edge)
 
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         return True
 
     def is_comparison(self) -> bool:
@@ -180,12 +180,12 @@ class PUSH_LEGAL_EDGES(AbstractCommand):
 
 
 class PUSH_EDGE(AbstractCommand):
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         if state.edge_register:
             state.edge_stack.append(state.edge_register)
 
-    def is_applicable(self, state: State) -> bool:
-        return True # if edge_register is None, we do nothing.
+    def is_applicable(self, state: VMState) -> bool:
+        return True  # if edge_register is None, we do nothing.
 
     def is_comparison(self) -> bool:
         return False
@@ -195,11 +195,11 @@ class PUSH_EDGE(AbstractCommand):
 
 
 class POP_EDGE(AbstractCommand):
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         if len(state.edge_stack) > 0:
             state.edge_stack.pop()
 
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         # if the edge_stack is already empty we do nothing. Therefore, always applicable.
         return True
 
@@ -211,11 +211,11 @@ class POP_EDGE(AbstractCommand):
 
 
 class IF_EDGE_STACK_REMAINING(AbstractCommand):
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         if len(state.edge_stack) == 0:
             state.pc += 1
 
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         return True
 
     def is_comparison(self) -> bool:
@@ -226,26 +226,26 @@ class IF_EDGE_STACK_REMAINING(AbstractCommand):
 
 
 class ADD_EDGE_TO_SET(AbstractCommand):
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         if state.edge_register:
             state.edge_set.add(state.edge_register)
-    
-    def is_applicable(self, state: State) -> bool:
+
+    def is_applicable(self, state: VMState) -> bool:
         return state.edge_register is not None
-    
+
     def is_comparison(self) -> bool:
         return False
-    
+
     def __str__(self) -> str:
         return "ADD_EDGE_TO_SET"
 
 
 class REMOVE_EDGE_FROM_SET(AbstractCommand):
-    def execute(self, state: State) -> None:
-        if state.edge_register:
+    def execute(self, state: VMState) -> None:
+        if state.edge_register and state.edge_register in state.edge_set:
             state.edge_set.remove(state.edge_register)
 
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         return state.edge_register is not None
 
     def is_comparison(self) -> bool:
@@ -256,11 +256,11 @@ class REMOVE_EDGE_FROM_SET(AbstractCommand):
 
 
 class IF_EDGE_SET_CAPACITY_REMAINING(AbstractCommand):
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         if not (len(state.edge_set) < len(state.input.nodes) - 1):
             state.pc += 1
 
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         return True
 
     def is_comparison(self) -> bool:
@@ -271,11 +271,11 @@ class IF_EDGE_SET_CAPACITY_REMAINING(AbstractCommand):
 
 
 class ADD_TO_SET(AbstractCommand):
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         if state.stack:
             state.set.add(state.stack[-1].node)
 
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         return len(state.stack) > 0
 
     def is_comparison(self) -> bool:
@@ -286,12 +286,12 @@ class ADD_TO_SET(AbstractCommand):
 
 
 class IF_IN_SET(AbstractCommand):  # NOTE: could be unnecessary
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         if state.stack:
             if state.stack[-1].node not in state.set:
                 state.pc += 1
 
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         return len(state.stack) > 0
 
     def is_comparison(self) -> bool:
@@ -302,11 +302,11 @@ class IF_IN_SET(AbstractCommand):  # NOTE: could be unnecessary
 
 
 class PUSH_HEAP(AbstractCommand):
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         if state.stack:
             heapq.heappush(state.heap, state.stack[-1])
 
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         return len(state.stack) > 0
 
     def is_comparison(self) -> bool:
@@ -317,12 +317,12 @@ class PUSH_HEAP(AbstractCommand):
 
 
 class POP_HEAP(AbstractCommand):
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         if len(state.heap) > 0:
             # TODO(philippkolbe): we have to decide where we want to pop the node to
             state.value_register = heapq.heappop(state.heap).node
 
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         return len(state.heap) == 0
 
     def is_comparison(self) -> bool:
@@ -333,11 +333,11 @@ class POP_HEAP(AbstractCommand):
 
 
 class IF_HEAP_EMPTY(AbstractCommand):
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         if len(state.heap) > 0:
             state.pc += 1
 
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         return True
 
     def is_comparison(self) -> bool:
@@ -348,14 +348,14 @@ class IF_HEAP_EMPTY(AbstractCommand):
 
 
 class NEXT_NODE(AbstractCommand):
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         if state.stack:
             last_node = state.stack[-1].node
             next_node = state.input.next_node(last_node)
             state.stack[-1].node = next_node
             state.stack[-1].edge = state.input.first_edge(next_node)
 
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         return len(state.stack) > 0
 
     def is_comparison(self) -> bool:
@@ -366,13 +366,13 @@ class NEXT_NODE(AbstractCommand):
 
 
 class NEXT_EDGE(AbstractCommand):
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         if state.stack:
             state.stack[-1].edge = state.input.next_edge(
                 state.stack[-1].node, state.stack[-1].edge
             )
 
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         return len(state.stack) > 0
 
     def is_comparison(self) -> bool:
@@ -383,7 +383,7 @@ class NEXT_EDGE(AbstractCommand):
 
 
 class TO_NEIGHBOR(AbstractCommand):
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         if state.stack:
             last_node = state.stack[-1].node
             last_edge = state.stack[-1].edge
@@ -392,7 +392,7 @@ class TO_NEIGHBOR(AbstractCommand):
             )
             state.stack[-1].edge = last_edge
 
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         return len(state.stack) > 0
 
     def is_comparison(self) -> bool:
@@ -403,13 +403,13 @@ class TO_NEIGHBOR(AbstractCommand):
 
 
 class IF_IS_NOT_FIRST_NODE(AbstractCommand):
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         if state.stack:
             last_node = state.stack[-1].node
             if last_node == state.input.first_node():
                 state.pc += 1
 
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         return len(state.stack) > 0
 
     def is_comparison(self) -> bool:
@@ -420,14 +420,14 @@ class IF_IS_NOT_FIRST_NODE(AbstractCommand):
 
 
 class IF_IS_NOT_FIRST_EDGE(AbstractCommand):
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         if state.stack:
             last_node = state.stack[-1].node
             last_edge = state.stack[-1].edge
             if last_edge == state.input.first_edge(last_node):
                 state.pc += 1
 
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         return len(state.stack) > 0
 
     def is_comparison(self) -> bool:
@@ -438,10 +438,11 @@ class IF_IS_NOT_FIRST_EDGE(AbstractCommand):
 
 
 class WRITE_EDGE_REGISTER(AbstractCommand):
-    def execute(self, state: State) -> None:
-        state.edge_register = state.edge_stack[-1]
+    def execute(self, state: VMState) -> None:
+        if state.edge_stack:
+            state.edge_register = state.edge_stack[-1]
 
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         return len(state.stack) > 0
 
     def is_comparison(self) -> bool:
@@ -452,10 +453,10 @@ class WRITE_EDGE_REGISTER(AbstractCommand):
 
 
 class RESET_EDGE_REGISTER(AbstractCommand):
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         state.edge_register = None
 
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         return True
 
     def is_comparison(self) -> bool:
@@ -466,11 +467,11 @@ class RESET_EDGE_REGISTER(AbstractCommand):
 
 
 class WRITE_EDGE_WEIGHT(AbstractCommand):
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         if state.stack:
             state.value_register = state.stack[-1].edge.weight
 
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         return len(state.stack) > 0
 
     def is_comparison(self) -> bool:
@@ -481,10 +482,10 @@ class WRITE_EDGE_WEIGHT(AbstractCommand):
 
 
 class RESET_EDGE_WEIGHT(AbstractCommand):
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         state.value_register = -1
 
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         return True
 
     def is_comparison(self) -> bool:
@@ -495,11 +496,11 @@ class RESET_EDGE_WEIGHT(AbstractCommand):
 
 
 class ADD_TO_OUT(AbstractCommand):
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         if state.value_register != -1:
             state.ret_register += state.value_register
 
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         return bool(state.value_register != -1)
 
     def is_comparison(self) -> bool:
@@ -510,11 +511,15 @@ class ADD_TO_OUT(AbstractCommand):
 
 
 class IF_EDGE_WEIGHT_LT(AbstractCommand):
-    def execute(self, state: State) -> None:
-        if len(state.edge_stack) > 0 and state.edge_register and state.edge_register.weight >= state.edge_stack[-1].weight:
+    def execute(self, state: VMState) -> None:
+        if (
+            len(state.edge_stack) > 0
+            and state.edge_register
+            and state.edge_register.weight >= state.edge_stack[-1].weight
+        ):
             state.pc += 1
 
-    def is_applicable(self, state: State) -> bool:
+    def is_applicable(self, state: VMState) -> bool:
         return state.value_register != -1 and len(state.stack) > 0
 
     def is_comparison(self) -> bool:
@@ -526,15 +531,15 @@ class IF_EDGE_WEIGHT_LT(AbstractCommand):
 
 # This is a cheat command. can be used for testing.
 class COMPUTE_MST(AbstractCommand):
-    def execute(self, state: State) -> None:
+    def execute(self, state: VMState) -> None:
         state.edge_set = compute_mst(state.input)
-    
-    def is_applicable(self, state: State) -> bool:
+
+    def is_applicable(self, state: VMState) -> bool:
         return True
 
     def is_comparison(self) -> bool:
         return False
-    
+
     def __str__(self) -> str:
         return "COMPUTE_MST"
 
