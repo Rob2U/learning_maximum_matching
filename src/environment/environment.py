@@ -57,14 +57,33 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):  # TODO(rob2u)
             [len(COMMAND_REGISTRY) + 1] * self.max_code_length
         )
 
-        self.max_n = 10
-        self.max_m = 30
+        # TODO: add min_n and min_m
+        self.min_n = 3
+        self.min_m = 3
+        self.max_n = 3
+        self.max_m = 3
+
+        assert (
+            self.min_n <= self.max_n and self.min_m >= self.min_n - 1
+        ), "Bad n / m values"
+
         self.reset()
 
     def step(
         self, action: int
     ) -> Tuple[npt.ArrayLike, float, bool, bool, Dict[str, Any]]:
-        """Execute the action and return the new state, reward, and whether the episode is terminated and truncated"""
+        """Execute the action and return the new state, reward, and whether the episode is done
+
+        Args:
+            action: The action to execute
+
+        Returns:
+            observation: The new state of the environment (the code), encoded as np.array of ints (with length self.max_code_length)
+            reward: The reward for the action
+            terminal: Whether the episode is done (True if the action is RET)
+            truncated: Whether the code was truncated (True if the code is too long > self.max_code_length)
+        """
+
         instruction = Transpiler.intToCommand([action])[0]
         truncated = not self.vm.append_instruction(instruction)
         result, vm_state, code_state = self.vm.run()
@@ -80,7 +99,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):  # TODO(rob2u)
         return (
             observation,
             _reward,
-            code_state.timeout or code_state.finished,
+            code_state.finished,
             truncated,
             {},
         )
@@ -92,12 +111,21 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):  # TODO(rob2u)
         seed: int | None = None,
         options: dict[str, Any] | None = None,
     ) -> Tuple[npt.ArrayLike, Dict[str, Any]]:
+        """Reset the environment to a new state (can optionally provide a code to start with)
+
+        Args:
+            code: The code to start with. Defaults to None.
+
+        Returns:
+            observation: The initial state of the environment (the code), encoded as np.array of ints (with length self.max_code_length)
+            info: Additional information about the environment (in our case an empty dictionary)
+        """
 
         # NOTE(rob2u): we use standard library random in our Graph generation and here so we use np_random for adaptability
         random.seed(seed)
 
-        n = random.randint(2, self.max_n)
-        m = random.randint(n - 1, min(n * (n - 1) // 2, self.max_m))
+        n = random.randint(self.min_n, self.max_n)
+        m = random.randint(self.min_m, min(n * (n - 1) // 2, self.max_m))
 
         graph = generate_graph(n, m, seed=None)
         self.vm = VirtualMachine([], graph, max_code_len=self.max_code_length)
@@ -133,7 +161,29 @@ class VirtualMachine:
         self.max_code_len = max_code_len
         self.verbose = verbose
 
-    def run(self) -> Tuple[Set[Edge], VMState, CodeState]:
+    def run(
+        self,
+        reset: bool = False,
+    ) -> Tuple[
+        Set[Edge], VMState, CodeState
+    ]:  # TODO(rob2u): make alternative to run that does not need reset ()
+        """Run the current code on the VM.
+
+        Args:
+            reset: RESETS THE VMs STATE. Defaults to False.
+
+        Returns:
+            EdgeSet: The set of edges returned by the algorithm
+            VMState: Current state of the vm executing the code. See vm_state.py
+            CodeState: Current state of the code (code + runtime + ...). See code_state.py
+        """
+        # reset the vm state to start a new execution
+        if reset:
+            self.vm_state.reset()
+            tmp_code = self.code_state.code
+            self.code_state.code = tmp_code
+            self.code_state.reset()
+
         while self.vm_state.pc < len(self.code_state.code):
             op = self.code_state.code[self.vm_state.pc]()  # type: ignore
             self.log(op)

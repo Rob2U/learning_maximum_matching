@@ -11,19 +11,19 @@ if __name__ == "__main__":
     vec_env = make_vec_env("MSTCode-v0", n_envs=4)  # type: ignore
     model = sb3.PPO("MlpPolicy", vec_env, verbose=1, device="cpu")  # type: ignore
 
-    model.learn(total_timesteps=1_000_000)
+    model.learn(total_timesteps=100_000)
 
     model.save("ppo_mst_code")
 
     # check what the model has learned
     new_env: MSTCodeEnvironment = gym.make("MSTCode-v0")  # type: ignore
     state, _ = new_env.reset()
-    is_done = False
+    is_terminated = False
     is_truncated = False
     curr_reward = 0.0
-    while not (is_done or is_truncated):
+    while not (is_terminated or is_truncated):  # TODO(rob2u): check if this is correct
         action, _ = model.predict(observation=state)  # type: ignore
-        state, curr_reward, is_done, is_truncated, _ = new_env.step(action)  # type: ignore
+        state, curr_reward, is_terminated, is_truncated, _ = new_env.step(action)  # type: ignore
 
         # print(Transpiler.intToCommand([action + 1])[0]())  # type: ignore
 

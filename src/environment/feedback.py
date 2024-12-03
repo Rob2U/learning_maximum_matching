@@ -6,6 +6,10 @@ from .structure_elements import Edge
 from .vm_state import VMState
 
 
+# def reward_multiple_graphs():  # TODO
+# pass
+
+
 def reward(result: Set[Edge], vm_state: VMState, code_state: CodeState) -> float:
     rewards = [
         # reward_finite_runtime, # bad values (skew the reward)
