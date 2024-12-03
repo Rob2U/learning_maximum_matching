@@ -4,6 +4,7 @@ from .algorithms import compute_mst
 from .code_state import CodeState
 from .structure_elements import Edge
 from .vm_state import VMState
+from .commands import NOP
 
 
 # def reward_multiple_graphs():  # TODO
@@ -13,12 +14,15 @@ from .vm_state import VMState
 def reward(result: Set[Edge], vm_state: VMState, code_state: CodeState) -> float:
     rewards = [
         # reward_finite_runtime, # bad values (skew the reward)
-        reward_valid_spanning_tree_length,
+        # reward_valid_spanning_tree_length,
         # reward_no_cycles, # not implemented
-        reward_covered_nodes,
+        # reward_covered_nodes,
         # reward_minimality, # bad values (skew the reward)
-        reward_efficiency,
-        reward_distance_to_MST,
+        # reward_efficiency,
+        # reward_distance_to_MST,
+        reward_correct_edges,
+        punish_mst_weight_too_large,
+        punish_code_length,
     ]
 
     # TODO(mehdi): implement a mechanism to weight the rewards given a config. Make sure that all rewards are on the same scale so the weights are valid.
@@ -26,6 +30,59 @@ def reward(result: Set[Edge], vm_state: VMState, code_state: CodeState) -> float
     return sum(
         reward(result=result, vm_state=vm_state, code_state=code_state)  # type: ignore
         for reward in rewards
+    )
+
+
+def punish_mst_weight_too_large(
+    result: Set[Edge], vm_state: VMState, code_state: CodeState
+) -> float:
+    """Punish the algorithm for returning a spanning tree with a weight that is too large. Range: [-1, 0]
+
+    Args:
+        result (Set[Edge]): _description_
+        vm_state (VMState): _description_
+        code_state (CodeState): _description_
+
+    Returns:
+        float: _description_
+    """
+    mst_weight = sum(edge.weight for edge in result)
+    actual_mst_weight = sum(edge.weight for edge in compute_mst(vm_state.input))
+
+    return (
+        -abs(mst_weight - actual_mst_weight)
+        / sum([edge.weight for edge in vm_state.input.edges])
+        if mst_weight > actual_mst_weight
+        else 0.0
+    )
+
+
+def reward_correct_edges(
+    result: Set[Edge], vm_state: VMState, code_state: CodeState
+) -> float:
+    """Reward the algorithm for returning the correct edges in the MST. Range: [0, 1]
+
+    Args:
+        result (Set[Edge]): _description_
+        vm_state (VMState): _description_
+        code_state (CodeState): _description_
+
+    Returns:
+        float: _description_
+    """
+    mst = compute_mst(vm_state.input)
+    correct_edges = len(result.intersection(mst))
+    return correct_edges / len(mst)
+
+
+def punish_code_length(
+    result: Set[Edge], vm_state: VMState, code_state: CodeState, punish_cap: int = 32
+) -> float:
+    code_length = len(code_state.code)
+    return (
+        -(code_length - punish_cap) / (128 - punish_cap)  # HACK HACK HACK
+        if code_length > punish_cap
+        else 0.0
     )
 
 
@@ -79,6 +136,7 @@ def reward_distance_to_MST(
     mst = compute_mst(vm_state.input)
     # count differences between the two sets
     diff = mst.symmetric_difference(result)
+
     return -len(diff)
 
 
