@@ -3,16 +3,24 @@ from sb3_contrib import MaskablePPO
 from sb3_contrib.common.maskable.utils import get_action_masks
 from stable_baselines3.common.env_util import make_vec_env
 
+from args import GlobalArgs
 from environment.environment import MSTCodeEnvironment, Transpiler
 from environment.feedback import reward
 
+# from simple_parsing import ArgumentParser
+
+
 if __name__ == "__main__":
+    # load configuration
+    global_args = GlobalArgs.load_yaml("configs/config.yaml").to_dict()
+    print(global_args)
+
     gym.register("MSTCode-v0", entry_point=MSTCodeEnvironment)  # type: ignore
 
-    vec_env = make_vec_env("MSTCode-v0", n_envs=4)  # type: ignore
+    vec_env = make_vec_env("MSTCode-v0", env_kwargs=dict(global_args), n_envs=4)  # type: ignore
     model = MaskablePPO("MlpPolicy", vec_env, verbose=1, device="cpu")  # type: ignore
 
-    model.learn(total_timesteps=100_000)
+    model.learn(total_timesteps=global_args["iterations"])
 
     model.save("ppo_mst_code")
 
@@ -36,12 +44,12 @@ if __name__ == "__main__":
     print("Program:")
     print([str(a()) for a in program])
 
-    test_environment = MSTCodeEnvironment()
+    test_environment = MSTCodeEnvironment(num_vms_per_env=1, **global_args)  # type: ignore
     for i in range(n):
         test_environment.reset(code=program)
 
         # run the code
-        result, vm_state = test_environment.vm.run()
+        result, vm_state = test_environment.vms[0].run()
         rewards.append(reward(result, vm_state))
 
     print("Rewards: ")

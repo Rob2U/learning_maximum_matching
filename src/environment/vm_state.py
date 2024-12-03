@@ -63,13 +63,13 @@ class VMState:
     early_ret: bool
     execution_counter: int
 
-    code: List[AbstractCommand] = []
+    code: List[type[AbstractCommand]] = []
     runtime_steps: int = 0
     finished: bool = False
     timeout: bool = False
     truncated: bool = False
 
-    def __init__(self, input: Graph, code: List[AbstractCommand] = []) -> None:
+    def __init__(self, input: Graph, code: List[type[AbstractCommand]] = []) -> None:
         self.reset()
 
         self.input = input
