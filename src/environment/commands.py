@@ -1,31 +1,11 @@
 import heapq
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 
 from .algorithms import UnionFind, compute_mst
 from .structure_elements import NodeEdgePointer
-from .vm_state import VMState
+from .vm_state import VMState, AbstractCommand
 
 ############### ABSTRACT COMMANDS ####################
-
-
-class AbstractCommand(ABC):
-    @abstractmethod
-    def execute(self, state: VMState) -> None:
-        pass
-
-    @abstractmethod
-    def is_applicable(self, state: VMState) -> bool:
-        pass
-
-    @abstractmethod  # NOTE(rob2u): not sure if necessary
-    def is_comparison(self) -> bool:
-        pass
-
-    @abstractmethod
-    def __str__(self) -> str:
-        pass
-
-
 class ConditionalCommand(AbstractCommand):
     """Abstract class for commands that are conditionals."""
 
@@ -53,7 +33,8 @@ class NOP(AbstractCommand):
         pass
 
     def is_applicable(self, state: VMState) -> bool:
-        return True
+        # in our current instruction set there is no case where NOP will have any effect
+        return False
 
     def is_comparison(self) -> bool:
         return False
@@ -99,7 +80,7 @@ class POP_MARK(AbstractCommand):
             state.mark_stack.pop()
 
     def is_applicable(self, state: VMState) -> bool:
-        return True
+        return len(state.mark_stack) > 0
 
     def is_comparison(self) -> bool:
         return False
@@ -114,7 +95,7 @@ class JUMP(AbstractCommand):
             state.pc = state.mark_stack.pop()
 
     def is_applicable(self, state: VMState) -> bool:
-        return True
+        return len(state.mark_stack) > 0
 
     def is_comparison(self) -> bool:
         return False
@@ -132,7 +113,7 @@ class WRITE_EDGE_REGISTER(AbstractCommand):
             state.edge_register = state.edge_stack[-1]
 
     def is_applicable(self, state: VMState) -> bool:
-        return len(state.stack) > 0
+        return len(state.edge_stack) > 0
 
     def is_comparison(self) -> bool:
         return False
@@ -197,7 +178,8 @@ class PUSH_EDGE(AbstractCommand):
             state.edge_stack.append(state.edge_register)
 
     def is_applicable(self, state: VMState) -> bool:
-        return True  # if edge_register is None, we do nothing.
+        # if edge_register is None, we do nothing.
+        return state.edge_register is not None
 
     def is_comparison(self) -> bool:
         return False
@@ -213,7 +195,7 @@ class POP_EDGE(AbstractCommand):
 
     def is_applicable(self, state: VMState) -> bool:
         # if the edge_stack is already empty we do nothing. Therefore, always applicable.
-        return True
+        return len(state.edge_stack) > 0
 
     def is_comparison(self) -> bool:
         return False

@@ -1,10 +1,31 @@
-from typing import List, Set
+from abc import ABC, abstractmethod
+from typing import List, Set, Any
 
 from .structure_elements import Edge, Graph, NodeEdgePointer
 
 
+# unfortunately we need to define this here because of circular imports
+class AbstractCommand(ABC):
+    @abstractmethod
+    def execute(self, state: "VMState") -> None:
+        pass
+
+    @abstractmethod
+    def is_applicable(self, state: "VMState") -> bool:
+        """Used for action masking: does executing the command have any effect?"""
+        pass
+
+    @abstractmethod  # NOTE(rob2u): not sure if necessary
+    def is_comparison(self) -> bool:
+        pass
+
+    @abstractmethod
+    def __str__(self) -> str:
+        pass
+
+
 class VMState:
-    """Current state of the virtual machine
+    """Current state of the virtual machine including the code state.
 
     Attributes:
     pc: Program counter
@@ -15,6 +36,12 @@ class VMState:
     ret_register: Return register
     value_register: Value register
     early_ret: Flag for early return
+
+    code: List of commands
+    finished: Flag for finished execution
+    runtime_steps: Number of steps executed
+    timeout: Flag for timeout execution
+    truncated: Flag for truncated execution
     """
 
     input: Graph
@@ -36,11 +63,17 @@ class VMState:
     early_ret: bool
     execution_counter: int
 
-    timeout: bool
+    code: List[AbstractCommand] = []
+    runtime_steps: int = 0
+    finished: bool = False
+    timeout: bool = False
+    truncated: bool = False
 
-    def __init__(self, input: Graph):
-        self.input = input
+    def __init__(self, input: Graph, code: List[AbstractCommand] = []) -> None:
         self.reset()
+
+        self.input = input
+        self.code = code
 
     def reset(self) -> None:
         self.pc = 0
@@ -50,6 +83,12 @@ class VMState:
         self.heap = []
         self.edge_set = set()
         self.edge_stack = []
+
+        self.code = []
+        self.runtime_steps = 0
+        self.finished = False
+        self.timeout = False
+        self.truncated = False
 
         self.ret_register = -1
         self.value_register = -1
