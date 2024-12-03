@@ -34,19 +34,41 @@ from .commands import (
     TO_NEIGHBOR,
     WRITE_EDGE_REGISTER,
     WRITE_EDGE_WEIGHT,
-    AbstractCommand,
 )
 from .feedback import reward
 from .generation import generate_graph
-from .structure_elements import Edge, Graph
-from .vm_state import VMState
+from .vm import VirtualMachine
+from .vm_state import AbstractCommand
 
 
-class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):  # TODO(rob2u)
-    def __init__(self) -> None:
+class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
+    def __init__(
+        self,
+        max_code_length: int = 128,
+        reset_for_every_run: bool = False,
+        num_vms_per_env: int = 1,
+        min_n: int = 3,
+        max_n: int = 3,
+        min_m: int = 3,
+        max_m: int = 3,
+        **kwargs: Any,
+    ) -> None:
+        """Initializes the environment
+
+        Args:
+            max_code_length: The maximum length of the code. Defaults to 128.
+            reset_for_every_run: Only keep the code / state for every single call to run. Reset VM(s) + Generate new graph for every run(). Defaults to False.
+            num_vms_per_env: The number of virtual machines to run. This is somewhat equivalent to the number of graphs we evaluate per run(). Defaults to 1.
+            min_n: The minimum number of nodes in the graph. Defaults to 3.
+            max_n: The maximum number of nodes in the graph. Defaults to 3.
+            min_m: The minimum number of edges in the graph. Defaults to 3.
+            max_m: The maximum number of edges in the graph. Defaults to 3.
+        """
+
         super().__init__()
-        self.max_code_length: int = 128
-        self.vm: VirtualMachine
+        self.max_code_length: int = max_code_length
+        self.num_vms_per_env: int = num_vms_per_env
+        self.vms: List[VirtualMachine] = []
 
         # Attributes used by the gymnasium library
         self.action_space = gym.spaces.Discrete(  # type: ignore
@@ -56,11 +78,11 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):  # TODO(rob2u)
             [len(COMMAND_REGISTRY) + 1] * self.max_code_length
         )
 
-        # TODO: add min_n and min_m
-        self.min_n = 3
-        self.min_m = 3
-        self.max_n = 3
-        self.max_m = 3
+        self.min_n = min_n
+        self.max_n = max_n
+        self.min_m = min_m
+        self.max_m = max_m
+        self.reset_for_every_run = reset_for_every_run
 
         assert (
             self.min_n <= self.max_n and self.min_m >= self.min_n - 1
@@ -68,10 +90,46 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):  # TODO(rob2u)
 
         self.reset()
 
-    def step(
-        self, action: int
+    def step(self, action: int) -> Tuple[npt.ArrayLike, float, bool, Dict[str, Any]]:  # type: ignore
+        """Execute the action on all VMs and return the new state, reward, and whether the episode is done
+
+        Args:
+            action (int): An as int encoded AbstractCommand provided by the agent
+
+        Returns:
+            observation: The new state of the environment (the code), encoded as np.array of ints (with length self.max_code_length)
+            reward: The reward for the action
+            terminal: Whether the episode is done (True if the action is RET)
+            info: Additional information about the environment (in our case an empty dictionary)
+        """
+        observations, rewards, terminals, truncateds = [], [], [], []
+
+        for vm in self.vms:
+            observation, _reward, terminal, truncated, _ = self.step_vm(action, vm)
+            observations.append(observation)
+            rewards.append(_reward)
+            terminals.append(terminal)
+            truncateds.append(truncated)
+
+        assert all(
+            [val == terminals[0] for val in terminals]
+        ), "Bad terminal values: " + str(terminals)
+        assert all(
+            [val == truncateds[0] for val in truncateds]
+        ), "Bad truncated values: " + str(truncated)
+
+        return (
+            observations[0],
+            sum(rewards) / len(rewards),
+            terminals[0],
+            truncateds[0],
+            {},
+        )  # type: ignore
+
+    def step_vm(
+        self, action: int, vm: VirtualMachine
     ) -> Tuple[npt.ArrayLike, float, bool, bool, Dict[str, Any]]:
-        """Execute the action and return the new state, reward, and whether the episode is done
+        """Execute the action on a single VM and return the new state, reward, and whether the episode is done
 
         Args:
             action: The action to execute
@@ -82,10 +140,12 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):  # TODO(rob2u)
             terminal: Whether the episode is done (True if the action is RET)
             truncated: Whether the code was truncated (True if the code is too long > self.max_code_length)
         """
+        if self.reset_for_every_run:
+            self.reset(code=vm.vm_state.code)
 
         instruction = Transpiler.intToCommand([action])[0]
-        truncated = not self.vm.append_instruction(instruction)
-        result, vm_state = self.vm.run()
+        truncated = not vm.append_instruction(instruction)
+        result, vm_state = vm.run()
         _reward = reward(result, vm_state)
 
         # NOTE(rob2u): might be worth trying to parse the entire return state of the VM + code
@@ -123,94 +183,29 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):  # TODO(rob2u)
         # NOTE(rob2u): we use standard library random in our Graph generation and here so we use np_random for adaptability
         random.seed(seed)
 
-        n = random.randint(self.min_n, self.max_n)
-        m = random.randint(self.min_m, min(n * (n - 1) // 2, self.max_m))
+        self.vms = []
+        for _ in range(self.num_vms_per_env):
+            n = random.randint(self.min_n, self.max_n)
+            m = random.randint(self.min_m, min(n * (n - 1) // 2, self.max_m))
+            graph = generate_graph(n, m, seed=None)
 
-        graph = generate_graph(n, m, seed=None)
-        self.vm = VirtualMachine([], graph, max_code_len=self.max_code_length)
-
-        if code is not None:
-            self.vm.vm_state.code = code
+            self.vms.append(
+                VirtualMachine(
+                    code if code is not None else [],
+                    graph,
+                    max_code_len=self.max_code_length,
+                )
+            )
 
         # NOTE(rob2u): might be worth trying to parse the entire state of the VM (as above)
-        return np.array([0] * self.max_code_length), {}
+        return (
+            np.array([0] * self.max_code_length)
+            if not code
+            else np.array(code + [0] * (self.max_code_length - len(code)))
+        ), {}
 
     def close(self) -> None:
         pass
-
-
-class VirtualMachine:
-    """Simple stack-based virtual machine for graph traversal
-
-
-    See instruction_set.md for more info.
-    """
-
-    def __init__(
-        self,
-        code: List[Type[AbstractCommand]],
-        input: Graph,
-        max_code_len: int = 1000,
-        verbose: bool = False,
-    ):
-        self.vm_state = VMState(input, code)
-
-        self.max_runtime = 100 + len(input.edges) * len(input.nodes) ** 2
-        self.max_code_len = max_code_len
-        self.verbose = verbose
-
-    def run(
-        self,
-        reset: bool = False,
-    ) -> Tuple[
-        Set[Edge], VMState
-    ]:  # TODO(rob2u): make alternative to run that does not need reset ()
-        """Run the current code on the VM.
-
-        Args:
-            reset: RESETS THE VMs STATE. Defaults to False.
-
-        Returns:
-            EdgeSet: The set of edges returned by the algorithm
-            VMState: Current state of the vm executing the code. See vm_state.py
-        """
-        # reset the vm state to start a new execution
-        if reset:
-            self.vm_state.reset()
-            tmp_code = self.vm_state.code
-            self.vm_state.code = tmp_code
-            self.vm_state.reset()
-
-        while self.vm_state.pc < len(self.vm_state.code):
-            op = self.vm_state.code[self.vm_state.pc]()  # type: ignore
-            self.log(op)
-            op.execute(self.vm_state)
-
-            self.vm_state.pc += 1
-            if self.vm_state.early_ret:
-                self.vm_state.finished = True
-                break
-
-            self.vm_state.runtime_steps += 1
-            if self.vm_state.runtime_steps > self.max_runtime:
-                break
-
-        return (
-            self.vm_state.edge_set,
-            self.vm_state,
-        )
-
-    def append_instruction(self, instruction: Type[AbstractCommand]) -> bool:
-        """Add an instruction to the code if it is not too long. If it is too long, return False"""
-        if len(self.vm_state.code) < self.max_code_len:
-            self.vm_state.code.append(instruction)
-            return True
-        else:
-            return False
-
-    def log(self, item: Any) -> None:
-        if self.verbose:
-            print(item)
 
 
 COMMAND_REGISTRY: List[Type[AbstractCommand]] = [

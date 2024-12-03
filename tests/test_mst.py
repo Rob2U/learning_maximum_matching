@@ -16,8 +16,8 @@ from environment.commands import (
     RET,
     WRITE_EDGE_REGISTER,
 )
-from environment.environment import VirtualMachine
 from environment.generation import generate_graph
+from environment.vm import VirtualMachine
 
 
 def test_compute_mst() -> None:
@@ -54,8 +54,8 @@ def test_COMPUTE_MST_instruction(n_nodes: int, m_edges: int) -> None:
 
     # Create a virtual machine and run the code
     vm = VirtualMachine(code, test_graph, verbose=False)
-    result, vm_state, code_state = vm.run()
-    infinite = code_state.timeout
+    result, vm_state = vm.run()
+    infinite = vm_state.timeout
 
     # Check if the result is not infinite
     assert not infinite, "Max instructions reached."
@@ -94,8 +94,8 @@ def test_simple_prims_algorithm(n_nodes: int, m_edges: int) -> None:
 
     # Create a virtual machine and run the code
     vm = VirtualMachine(code, test_graph, verbose=False)
-    result, vm_state, code_state = vm.run()
-    infinite = code_state.timeout
+    result, vm_state = vm.run()
+    infinite = vm_state.timeout
 
     # Check if the result is not infinite
     assert not infinite, "Max instructions reached."

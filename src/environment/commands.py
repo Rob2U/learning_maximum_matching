@@ -3,7 +3,8 @@ from abc import abstractmethod
 
 from .algorithms import UnionFind, compute_mst
 from .structure_elements import NodeEdgePointer
-from .vm_state import VMState, AbstractCommand
+from .vm_state import AbstractCommand, VMState
+
 
 ############### ABSTRACT COMMANDS ####################
 class ConditionalCommand(AbstractCommand):

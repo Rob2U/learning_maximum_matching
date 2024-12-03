@@ -4,7 +4,6 @@ from .algorithms import compute_mst
 from .structure_elements import Edge
 from .vm_state import VMState
 
-
 # def reward_multiple_graphs():  # TODO
 # pass
 

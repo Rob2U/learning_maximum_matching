@@ -1,0 +1,14 @@
+# GENERAL
+iterations: 1000000
+max_code_length: 128
+reset_for_every_run: False
+num_vms_per_env: 10
+
+# REWARDs
+punish_cap: 32
+
+# ENVIRONMENT -- GRAPH Generation
+min_n: 3
+min_m: 3
+max_n: 3
+max_m: 3
