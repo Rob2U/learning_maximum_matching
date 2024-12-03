@@ -1,7 +1,6 @@
 import gymnasium as gym
 from sb3_contrib import MaskablePPO
 from sb3_contrib.common.maskable.utils import get_action_masks
-from sb3_contrib.common.wrappers import ActionMasker
 from stable_baselines3.common.env_util import make_vec_env
 
 from args import GlobalArgs
