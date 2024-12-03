@@ -1,16 +1,19 @@
 import heapq
 from abc import abstractmethod
+from typing import Type, List
 
 from .algorithms import UnionFind, compute_mst
 from .structure_elements import NodeEdgePointer
 from .vm_state import VMState, AbstractCommand
 
 ############### ABSTRACT COMMANDS ####################
+
 class ConditionalCommand(AbstractCommand):
     """Abstract class for commands that are conditionals."""
 
     def is_applicable(self, state: VMState) -> bool:
-        return True
+        # 2 if commands in a row make sense (its an implies operator) but 3 in a row is just weird.
+        return are_last_n_commands_different_to_all(state.code, CONDITIONAL_COMMANDS, 3)
 
     def is_comparison(self) -> bool:
         return True
@@ -26,7 +29,6 @@ class ConditionalCommand(AbstractCommand):
 
 
 ############### GENERAL COMMANDS ####################
-
 
 class NOP(AbstractCommand):
     def execute(self, state: VMState) -> None:
@@ -48,7 +50,7 @@ class RET(AbstractCommand):
         state.early_ret = True
 
     def is_applicable(self, state: VMState) -> bool:
-        return True
+        return len(state.code) > 0
 
     def is_comparison(self) -> bool:
         return False
@@ -58,6 +60,7 @@ class RET(AbstractCommand):
 
 
 ############### MARKS + JUMPS FOR LOOPS ####################
+
 class PUSH_MARK(AbstractCommand):
     """Adds a code marker at the position of the current pc. Using JUMP we can loop back to this position later."""
 
@@ -80,7 +83,7 @@ class POP_MARK(AbstractCommand):
             state.mark_stack.pop()
 
     def is_applicable(self, state: VMState) -> bool:
-        return len(state.mark_stack) > 0
+        return does_command_exist(state.code, PUSH_MARK)
 
     def is_comparison(self) -> bool:
         return False
@@ -95,7 +98,7 @@ class JUMP(AbstractCommand):
             state.pc = state.mark_stack.pop()
 
     def is_applicable(self, state: VMState) -> bool:
-        return len(state.mark_stack) > 0
+        return does_command_exist(state.code, PUSH_MARK)
 
     def is_comparison(self) -> bool:
         return False
@@ -106,14 +109,18 @@ class JUMP(AbstractCommand):
 
 ################# EDGE REGISTER COMMANDS ####################
 
-
 class WRITE_EDGE_REGISTER(AbstractCommand):
     def execute(self, state: VMState) -> None:
         if state.edge_stack:
             state.edge_register = state.edge_stack[-1]
 
     def is_applicable(self, state: VMState) -> bool:
-        return len(state.edge_stack) > 0
+        # TODO(philipp): this is valid if we will push edges later and jump back to this command
+        # TODO(philipp): the only way where it would be valid is if the last command was wrapped in a conditional but then the last action was invalid...
+        return does_any_command_exist(
+            state.code,
+            PUSH_EDGE_COMMANDS,
+        ) and is_last_command_different_to(state.code, WRITE_EDGE_REGISTER)
 
     def is_comparison(self) -> bool:
         return False
@@ -127,7 +134,8 @@ class RESET_EDGE_REGISTER(AbstractCommand):
         state.edge_register = None
 
     def is_applicable(self, state: VMState) -> bool:
-        return True
+        # TODO(philipp): the only way where it would be valid is if the last command was wrapped in a conditional but then the last action was invalid...
+        return is_last_command_different_to(state.code, RESET_EDGE_REGISTER)
 
     def is_comparison(self) -> bool:
         return False
@@ -145,7 +153,8 @@ class ADD_EDGE_TO_SET(AbstractCommand):
             state.edge_set.add(state.edge_register)
 
     def is_applicable(self, state: VMState) -> bool:
-        return state.edge_register is not None
+        # TODO(philipp): the only way where it would be valid is if the last command was wrapped in a conditional but then the last action was invalid...
+        return is_last_command_different_to(state.code, ADD_EDGE_TO_SET)
 
     def is_comparison(self) -> bool:
         return False
@@ -160,7 +169,11 @@ class REMOVE_EDGE_FROM_SET(AbstractCommand):
             state.edge_set.remove(state.edge_register)
 
     def is_applicable(self, state: VMState) -> bool:
-        return state.edge_register is not None
+        # TODO(philipp): the only way where it would be valid is if the last command was wrapped in a conditional but then the last action was invalid...
+        # TODO(philipp): this is valid if we will write the edge register later and jump back to this command
+        return is_last_command_different_to(
+            state.code, REMOVE_EDGE_FROM_SET
+        ) and does_command_exist(state.code, WRITE_EDGE_REGISTER)
 
     def is_comparison(self) -> bool:
         return False
@@ -178,8 +191,11 @@ class PUSH_EDGE(AbstractCommand):
             state.edge_stack.append(state.edge_register)
 
     def is_applicable(self, state: VMState) -> bool:
-        # if edge_register is None, we do nothing.
-        return state.edge_register is not None
+        # TODO(philipp): this is valid if we will write the edge register later and jump back to this command
+        return does_command_exist(
+            state.code,
+            WRITE_EDGE_REGISTER,
+        )
 
     def is_comparison(self) -> bool:
         return False
@@ -194,8 +210,11 @@ class POP_EDGE(AbstractCommand):
             state.edge_stack.pop()
 
     def is_applicable(self, state: VMState) -> bool:
-        # if the edge_stack is already empty we do nothing. Therefore, always applicable.
-        return len(state.edge_stack) > 0
+        # TODO(philipp): this is valid if we will push edges later and jump back to this command
+        return does_any_command_exist(
+            state.code,
+            PUSH_EDGE_COMMANDS,
+        )
 
     def is_comparison(self) -> bool:
         return False
@@ -210,6 +229,11 @@ class IF_EDGE_STACK_REMAINING(ConditionalCommand):
     def condition(self, state: VMState) -> bool:
         return len(state.edge_stack) > 0
 
+    def is_applicable(self, state: VMState) -> bool:
+        return super().is_applicable(state) and is_last_command_different_to(
+            state.code, IF_EDGE_STACK_REMAINING
+        )
+
     def __str__(self) -> str:
         return "IF_EDGE_STACK_REMAINING"
 
@@ -223,12 +247,20 @@ class IF_EDGE_WEIGHT_LT(ConditionalCommand):
             and state.edge_stack[-1].weight < state.edge_register.weight
         )
 
+    def is_applicable(self, state: VMState) -> bool:
+        return (
+            super().is_applicable(state)
+            and is_last_command_different_to(state.code, IF_EDGE_WEIGHT_LT)
+            and does_command_exist(state.code, WRITE_EDGE_REGISTER)
+            and does_any_command_exist(state.code, PUSH_EDGE_COMMANDS)
+        )
+
     def __str__(self) -> str:
         return "IF_EDGE_WEIGHT_LT"
 
 
 ################### VALUE AND RETURN REGISTER COMMANDS ####################
-
+# Currently not needed but could be useful for future extensions
 
 class WRITE_EDGE_WEIGHT(AbstractCommand):
     def execute(self, state: VMState) -> None:
@@ -236,7 +268,8 @@ class WRITE_EDGE_WEIGHT(AbstractCommand):
             state.value_register = state.stack[-1].edge.weight
 
     def is_applicable(self, state: VMState) -> bool:
-        return len(state.stack) > 0
+        # TODO(philipp): implement masking for these commands
+        return True
 
     def is_comparison(self) -> bool:
         return False
@@ -250,6 +283,7 @@ class RESET_EDGE_WEIGHT(AbstractCommand):
         state.value_register = -1
 
     def is_applicable(self, state: VMState) -> bool:
+        # TODO(philipp): implement masking for these commands
         return True
 
     def is_comparison(self) -> bool:
@@ -267,6 +301,7 @@ class ADD_TO_OUT(AbstractCommand):
             state.ret_register += state.value_register
 
     def is_applicable(self, state: VMState) -> bool:
+        # TODO(philipp): implement masking for these commands
         return bool(state.value_register != -1)
 
     def is_comparison(self) -> bool:
@@ -288,6 +323,7 @@ class PUSH_START_NODE(AbstractCommand):
         )
 
     def is_applicable(self, state: VMState) -> bool:
+        # TODO(philipp): implement masking for these commands
         return True
 
     def is_comparison(self) -> bool:
@@ -306,6 +342,7 @@ class PUSH_CLONE_NODE(AbstractCommand):
             )
 
     def is_applicable(self, state: VMState) -> bool:
+        # TODO(philipp): implement masking for these commands
         # NOTE(rob2u): we replace PUSH_START_NODE by using this but putting the start_node on the stack if empty
         return len(state.stack) > 0
 
@@ -322,6 +359,7 @@ class POP_NODE(AbstractCommand):
             state.stack.pop()
 
     def is_applicable(self, state: VMState) -> bool:
+        # TODO(philipp): implement masking for these commands
         return len(state.stack) > 0
 
     def is_comparison(self) -> bool:
@@ -340,6 +378,7 @@ class NEXT_NODE(AbstractCommand):
             state.stack[-1].edge = state.input.first_edge(next_node)
 
     def is_applicable(self, state: VMState) -> bool:
+        # TODO(philipp): implement masking for these commands
         return len(state.stack) > 0
 
     def is_comparison(self) -> bool:
@@ -357,6 +396,7 @@ class NEXT_EDGE(AbstractCommand):
             )
 
     def is_applicable(self, state: VMState) -> bool:
+        # TODO(philipp): implement masking for these commands
         return len(state.stack) > 0
 
     def is_comparison(self) -> bool:
@@ -377,6 +417,7 @@ class TO_NEIGHBOR(AbstractCommand):
             state.stack[-1].edge = last_edge
 
     def is_applicable(self, state: VMState) -> bool:
+        # TODO(philipp): implement masking for these commands
         return len(state.stack) > 0
 
     def is_comparison(self) -> bool:
@@ -394,6 +435,7 @@ class IF_IS_NOT_FIRST_NODE(AbstractCommand):
                 state.pc += 1
 
     def is_applicable(self, state: VMState) -> bool:
+        # TODO(philipp): implement masking for these commands
         return len(state.stack) > 0
 
     def is_comparison(self) -> bool:
@@ -412,6 +454,7 @@ class IF_IS_NOT_FIRST_EDGE(AbstractCommand):
                 state.pc += 1
 
     def is_applicable(self, state: VMState) -> bool:
+        # TODO(philipp): implement masking for these commands
         return len(state.stack) > 0
 
     def is_comparison(self) -> bool:
@@ -430,6 +473,7 @@ class PUSH_HEAP(AbstractCommand):
             heapq.heappush(state.heap, state.stack[-1])
 
     def is_applicable(self, state: VMState) -> bool:
+        # TODO(philipp): implement masking for these commands
         return len(state.stack) > 0
 
     def is_comparison(self) -> bool:
@@ -446,6 +490,7 @@ class POP_HEAP(AbstractCommand):
             state.value_register = heapq.heappop(state.heap).node
 
     def is_applicable(self, state: VMState) -> bool:
+        # TODO(philipp): implement masking for these commands
         return len(state.heap) == 0
 
     def is_comparison(self) -> bool:
@@ -459,18 +504,28 @@ class IF_HEAP_EMPTY(ConditionalCommand):
     def condition(self, state: VMState) -> bool:
         return len(state.heap) == 0
 
+    def is_applicable(self, state: VMState) -> bool:
+        return super().is_applicable(state) and is_last_command_different_to(
+            state.code, IF_HEAP_EMPTY
+        )
+
     def __str__(self) -> str:
         return "IF_HEAP_EMPTY"
 
 
-################ CHEAT COMMANDS FOR MST ################
-
+################ "CHEAT" COMMANDS FOR MST ################
+# ordered in ascending order by how much they "cheat" (i.e. how much of the problem they solve on a non-atomic-instruction level)
 
 class IF_EDGE_SET_CAPACITY_REMAINING(ConditionalCommand):
     """This is also kind of cheating as it computes the end condition for MST directly."""
 
     def condition(self, state: VMState) -> bool:
         return len(state.edge_set) < len(state.input.nodes) - 1
+
+    def is_applicable(self, state: VMState) -> bool:
+        return super().is_applicable(state) and is_last_command_different_to(
+            state.code, IF_EDGE_SET_CAPACITY_REMAINING
+        )
 
     def __str__(self) -> str:
         return "IF_EDGE_SET_CAPACITY_REMAINING"
@@ -523,3 +578,46 @@ class COMPUTE_MST(AbstractCommand):
 
     def __str__(self) -> str:
         return "COMPUTE_MST"
+
+
+PUSH_EDGE_COMMANDS: List[Type[AbstractCommand]] = [PUSH_EDGE, PUSH_LEGAL_EDGES]
+CONDITIONAL_COMMANDS: List[Type[AbstractCommand]] = [
+    IF_EDGE_STACK_REMAINING,
+    IF_EDGE_WEIGHT_LT,
+    IF_EDGE_SET_CAPACITY_REMAINING,
+    IF_IS_NOT_FIRST_NODE,
+    IF_IS_NOT_FIRST_EDGE,
+    IF_HEAP_EMPTY,
+]
+
+
+def does_any_command_exist(
+    code: List[AbstractCommand], Commands: List[Type[AbstractCommand]]
+) -> bool:
+    return any(does_command_exist(code, Command) for Command in Commands)
+
+
+def does_command_exist(
+    code: List[AbstractCommand], Command: Type[AbstractCommand]
+) -> bool:
+    return any(isinstance(c, Command) for c in code)
+
+
+def are_last_n_commands_different_to_all(
+    code: List[AbstractCommand], Commands: List[Type[AbstractCommand]], n: int
+) -> bool:
+    return all(
+        is_last_command_different_to_all(code[min(0, -i) :], Commands) for i in range(n)
+    )
+
+
+def is_last_command_different_to_all(
+    code: List[AbstractCommand], Commands: List[Type[AbstractCommand]]
+) -> bool:
+    return all(is_last_command_different_to(code, Command) for Command in Commands)
+
+
+def is_last_command_different_to(
+    code: List[AbstractCommand], Command: Type[AbstractCommand]
+) -> bool:
+    return len(code) == 0 or not isinstance(code[-1], Command)
