@@ -19,13 +19,8 @@ if __name__ == "__main__":
 
     gym.register("MSTCode-v0", entry_point=MSTCodeEnvironment)  # type: ignore
 
-<<<<<<< HEAD
     vec_env = make_vec_env("MSTCode-v0", env_kwargs=dict(global_args), n_envs=4)  # type: ignore
-    model = sb3.PPO("MlpPolicy", vec_env, verbose=1, device="cpu")  # type: ignore
-=======
-    vec_env = make_vec_env("MSTCode-v0", n_envs=4)  # type: ignore
     model = MaskablePPO("MlpPolicy", vec_env, verbose=1, device="cpu")  # type: ignore
->>>>>>> 784ea9a39cdb0fd7c97b7422ea4b4cfa67c76bd9
 
     model.learn(total_timesteps=global_args["iterations"])
 
@@ -56,11 +51,7 @@ if __name__ == "__main__":
         test_environment.reset(code=program)
 
         # run the code
-<<<<<<< HEAD
         result, vm_state = test_environment.vms[0].run()
-=======
-        result, vm_state = test_environment.vm.run()
->>>>>>> 784ea9a39cdb0fd7c97b7422ea4b4cfa67c76bd9
         rewards.append(reward(result, vm_state))
 
     print("Rewards: ")
