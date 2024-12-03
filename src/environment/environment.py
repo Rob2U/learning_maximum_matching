@@ -5,7 +5,6 @@ import gymnasium as gym
 import numpy as np
 import numpy.typing as npt
 
-from .code_state import CodeState
 from .commands import (
     ADD_EDGE_TO_SET,
     ADD_TO_OUT,
@@ -86,11 +85,11 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):  # TODO(rob2u)
 
         instruction = Transpiler.intToCommand([action])[0]
         truncated = not self.vm.append_instruction(instruction)
-        result, vm_state, code_state = self.vm.run()
-        _reward = reward(result, vm_state, code_state)
+        result, vm_state = self.vm.run()
+        _reward = reward(result, vm_state)
 
         # NOTE(rob2u): might be worth trying to parse the entire return state of the VM + code
-        observation: npt.NDArray[int, 1] = np.array(Transpiler.commandToInt(code_state.code))  # type: ignore
+        observation: npt.NDArray[int, 1] = np.array(Transpiler.commandToInt(vm_state.code))  # type: ignore
         observation = np.concatenate(
             [observation, (self.max_code_length - observation.shape[0]) * [0]]
         )
@@ -99,7 +98,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):  # TODO(rob2u)
         return (
             observation,
             _reward,
-            code_state.finished,
+            vm_state.finished,
             truncated,
             {},
         )
@@ -131,7 +130,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):  # TODO(rob2u)
         self.vm = VirtualMachine([], graph, max_code_len=self.max_code_length)
 
         if code is not None:
-            self.vm.code_state.code = code
+            self.vm.vm_state.code = code
 
         # NOTE(rob2u): might be worth trying to parse the entire state of the VM (as above)
         return np.array([0] * self.max_code_length), {}
@@ -154,8 +153,7 @@ class VirtualMachine:
         max_code_len: int = 1000,
         verbose: bool = False,
     ):
-        self.vm_state = VMState(input)
-        self.code_state = CodeState(code)
+        self.vm_state = VMState(input, code)
 
         self.max_runtime = 100 + len(input.edges) * len(input.nodes) ** 2
         self.max_code_len = max_code_len
@@ -165,7 +163,7 @@ class VirtualMachine:
         self,
         reset: bool = False,
     ) -> Tuple[
-        Set[Edge], VMState, CodeState
+        Set[Edge], VMState
     ]:  # TODO(rob2u): make alternative to run that does not need reset ()
         """Run the current code on the VM.
 
@@ -175,39 +173,37 @@ class VirtualMachine:
         Returns:
             EdgeSet: The set of edges returned by the algorithm
             VMState: Current state of the vm executing the code. See vm_state.py
-            CodeState: Current state of the code (code + runtime + ...). See code_state.py
         """
         # reset the vm state to start a new execution
         if reset:
             self.vm_state.reset()
-            tmp_code = self.code_state.code
-            self.code_state.code = tmp_code
-            self.code_state.reset()
+            tmp_code = self.vm_state.code
+            self.vm_state.code = tmp_code
+            self.vm_state.reset()
 
-        while self.vm_state.pc < len(self.code_state.code):
-            op = self.code_state.code[self.vm_state.pc]()  # type: ignore
+        while self.vm_state.pc < len(self.vm_state.code):
+            op = self.vm_state.code[self.vm_state.pc]()  # type: ignore
             self.log(op)
             op.execute(self.vm_state)
 
             self.vm_state.pc += 1
             if self.vm_state.early_ret:
-                self.code_state.finished = True
+                self.vm_state.finished = True
                 break
 
-            self.code_state.runtime_steps += 1
-            if self.code_state.runtime_steps > self.max_runtime:
+            self.vm_state.runtime_steps += 1
+            if self.vm_state.runtime_steps > self.max_runtime:
                 break
 
         return (
             self.vm_state.edge_set,
             self.vm_state,
-            self.code_state,
         )
 
     def append_instruction(self, instruction: Type[AbstractCommand]) -> bool:
         """Add an instruction to the code if it is not too long. If it is too long, return False"""
-        if len(self.code_state.code) < self.max_code_len:
-            self.code_state.code.append(instruction)
+        if len(self.vm_state.code) < self.max_code_len:
+            self.vm_state.code.append(instruction)
             return True
         else:
             return False
@@ -301,10 +297,10 @@ if __name__ == "__main__":
     print(test_graph)
 
     print("##################")
-    result, vm_state, code_state = vm.run()
+    result, vm_state = vm.run()
     print("##################")
 
-    if not code_state.finished:
+    if not vm_state.finished:
         print("Program did not finish orderly!")
     else:
         print("Result:")
