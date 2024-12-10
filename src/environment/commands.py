@@ -1,3 +1,4 @@
+import logging
 import heapq
 from abc import abstractmethod
 from typing import List, Type
@@ -52,7 +53,14 @@ class RET(AbstractCommand):
         state.early_ret = True
 
     def is_applicable(self, state: VMState) -> bool:
-        return len(state.code) > 0
+        # Is only applicable if the position before the RET is not an IF command
+        # find the last command that is not a NOP
+        # if state.code and issubclass(ConditionalCommand, state.code[-1]):
+        #     return False
+        if state.code and isinstance(state.code[-1](), IF_EDGE_WEIGHT_LT):
+            return False
+
+        return True
 
     def is_comparison(self) -> bool:
         return False
@@ -121,10 +129,11 @@ class WRITE_EDGE_REGISTER(AbstractCommand):
     def is_applicable(self, state: VMState) -> bool:
         # TODO(philipp): this is valid if we will push edges later and jump back to this command
         # TODO(philipp): the only way where it would be valid is if the last command was wrapped in a conditional but then the last action was invalid...
-        return does_any_command_exist(
-            state.code,
-            PUSH_EDGE_COMMANDS,
-        ) and is_last_command_different_to(state.code, WRITE_EDGE_REGISTER)
+        # return does_any_command_exist(
+        #     state.code,
+        #     PUSH_EDGE_COMMANDS,
+        # ) and is_last_command_different_to(state.code, WRITE_EDGE_REGISTER)
+        return True
 
     def is_comparison(self) -> bool:
         return False
@@ -215,10 +224,11 @@ class POP_EDGE(AbstractCommand):
 
     def is_applicable(self, state: VMState) -> bool:
         # TODO(philipp): this is valid if we will push edges later and jump back to this command
-        return does_any_command_exist(
-            state.code,
-            PUSH_EDGE_COMMANDS,
-        )
+        # return does_any_command_exist(
+        #     state.code,
+        #     PUSH_EDGE_COMMANDS,
+        # )
+        return True
 
     def is_comparison(self) -> bool:
         return False
@@ -253,10 +263,10 @@ class IF_EDGE_WEIGHT_LT(ConditionalCommand):
 
     def is_applicable(self, state: VMState) -> bool:
         return (
-            super().is_applicable(state)
-            and is_last_command_different_to(state.code, IF_EDGE_WEIGHT_LT)
-            and does_command_exist(state.code, WRITE_EDGE_REGISTER)
-            and does_any_command_exist(state.code, PUSH_EDGE_COMMANDS)
+            # super().is_applicable(state)
+            is_last_command_different_to(state.code, IF_EDGE_WEIGHT_LT)
+            # and does_command_exist(state.code, WRITE_EDGE_REGISTER)
+            # and does_any_command_exist(state.code, PUSH_EDGE_COMMANDS)
         )
 
     def __str__(self) -> str:

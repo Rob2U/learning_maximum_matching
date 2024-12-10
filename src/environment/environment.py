@@ -1,3 +1,4 @@
+import logging
 import random
 from typing import Any, Dict, List, Tuple, Type
 
@@ -51,6 +52,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         max_n: int = 3,
         min_m: int = 3,
         max_m: int = 3,
+        only_reward_on_ret: bool = True,
         **kwargs: Any,
     ) -> None:
         """Initializes the environment
@@ -83,6 +85,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         self.min_m = min_m
         self.max_m = max_m
         self.reset_for_every_run = reset_for_every_run
+        self.only_reward_on_ret = only_reward_on_ret
 
         assert (
             self.min_n <= self.max_n and self.min_m >= self.min_n - 1
@@ -104,16 +107,36 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         """
         observations, rewards, terminals, truncateds = [], [], [], []
 
-        for vm in self.vms:
-            observation, _reward, terminal, truncated, _ = self.step_vm(action, vm)
+        for i in range(self.num_vms_per_env):
+            observation, _reward, terminal, truncated, _ = self.step_vm(action, i)
+
+            assert (not terminal and action != RET) or (terminal and action == 1), (
+                "Bad terminal value encountered: "
+                + str(terminal)
+                + " for "
+                + Transpiler.intToCommand([action])[0].__name__
+            )
+
+            if self.only_reward_on_ret and not terminal:
+                _reward = 0.0
             observations.append(observation)
             rewards.append(_reward)
             terminals.append(terminal)
             truncateds.append(truncated)
 
+        # NOTE(rob2u): the problem are if statements -> solution: use action masking and do not allow return directly after an if statement
+
+        if any(terminals):
+            logging.info(
+                "Program written: "
+                + str([str(op()) for op in self.vms[0].vm_state.code])
+            )
+            logging.info("Reward in Last Step: " + str(rewards[0]))
+
         assert all(
             [val == terminals[0] for val in terminals]
         ), "Bad terminal values: " + str(terminals)
+
         assert all(
             [val == truncateds[0] for val in truncateds]
         ), "Bad truncated values: " + str(truncated)
@@ -127,7 +150,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         )  # type: ignore
 
     def step_vm(
-        self, action: int, vm: VirtualMachine
+        self, action: int, vm_index: int
     ) -> Tuple[npt.ArrayLike, float, bool, bool, Dict[str, Any]]:
         """Execute the action on a single VM and return the new state, reward, and whether the episode is done
 
@@ -140,12 +163,16 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
             terminal: Whether the episode is done (True if the action is RET)
             truncated: Whether the code was truncated (True if the code is too long > self.max_code_length)
         """
+        assert 0 <= vm_index < self.num_vms_per_env, (
+            "Bad VM index!: " + str(vm_index) + " for " + str(self.num_vms_per_env)
+        )
+
         if self.reset_for_every_run:
-            self.reset(code=vm.vm_state.code)
+            self.reset(code=self.vms[vm_index].vm_state.code)
 
         instruction = Transpiler.intToCommand([action])[0]
-        truncated = not vm.append_instruction(instruction)
-        result, vm_state = vm.run()
+        truncated = not self.vms[vm_index].append_instruction(instruction)
+        result, vm_state = self.vms[vm_index].run()
         _reward = reward(result, vm_state)
 
         # NOTE(rob2u): might be worth trying to parse the entire return state of the VM + code
@@ -154,7 +181,6 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
             [observation, (self.max_code_length - observation.shape[0]) * [0]]
         )
         assert observation.shape[0] == self.max_code_length, "Bad observation shape!"
-
         return (
             observation,
             _reward,
@@ -218,33 +244,33 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
 
 COMMAND_REGISTRY: List[Type[AbstractCommand]] = [
     NOP,
-    RET,
-    PUSH_MARK,
-    JUMP,
-    POP_MARK,
-    PUSH_START_NODE,
-    PUSH_CLONE_NODE,
-    POP_NODE,
-    PUSH_HEAP,
-    POP_HEAP,
-    IF_HEAP_EMPTY,
-    NEXT_NODE,
-    NEXT_EDGE,
-    TO_NEIGHBOR,
-    IF_IS_NOT_FIRST_EDGE,
-    IF_IS_NOT_FIRST_NODE,
-    WRITE_EDGE_WEIGHT,
-    RESET_EDGE_WEIGHT,
-    ADD_TO_OUT,
-    IF_EDGE_WEIGHT_LT,
-    WRITE_EDGE_REGISTER,
-    RESET_EDGE_REGISTER,
-    POP_EDGE,
-    IF_EDGE_STACK_REMAINING,
-    PUSH_LEGAL_EDGES,
-    ADD_EDGE_TO_SET,
-    REMOVE_EDGE_FROM_SET,
-    IF_EDGE_SET_CAPACITY_REMAINING,
+    RET,  # only applicable if no if statement was is before
+    # PUSH_MARK,
+    # JUMP,
+    # POP_MARK,
+    # PUSH_START_NODE,
+    # PUSH_CLONE_NODE,
+    # POP_NODE,
+    # PUSH_HEAP,
+    # POP_HEAP,
+    # IF_HEAP_EMPTY,
+    # NEXT_NODE,
+    # NEXT_EDGE,
+    # TO_NEIGHBOR,
+    # IF_IS_NOT_FIRST_EDGE,
+    # IF_IS_NOT_FIRST_NODE,
+    # WRITE_EDGE_WEIGHT,  # always applicable
+    # RESET_EDGE_WEIGHT,  # always applicable
+    # ADD_TO_OUT,
+    IF_EDGE_WEIGHT_LT,  # not two in a row
+    WRITE_EDGE_REGISTER,  # <-NOT SEEN      if PUSH_LEGAL_EDGES before and not two in a row
+    RESET_EDGE_REGISTER,  # always applicable
+    POP_EDGE,  # <- NOT SEEN       only if PUSH_LEGAL_EDGES before
+    # IF_EDGE_STACK_REMAINING,
+    PUSH_LEGAL_EDGES,  # always applicable
+    ADD_EDGE_TO_SET,  # not two in a row
+    # REMOVE_EDGE_FROM_SET,
+    # IF_EDGE_SET_CAPACITY_REMAINING,
 ]
 
 

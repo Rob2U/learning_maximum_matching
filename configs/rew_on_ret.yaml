@@ -6,7 +6,7 @@ num_vms_per_env: 10
 action_masking: True
 
 # REWARDs
-only_reward_on_ret: False
+only_reward_on_ret: True
 punish_cap: 24
 
 # ENVIRONMENT -- GRAPH Generation

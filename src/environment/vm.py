@@ -51,6 +51,10 @@ class VirtualMachine:
 
             self.vm_state.pc += 1
             if self.vm_state.early_ret:
+                assert self.vm_state.code[self.vm_state.pc - 1].__name__ == "RET", (
+                    "Early return should only be used with RET! But was used with "
+                    + self.vm_state.code[self.vm_state.pc - 1].__name__
+                )
                 self.vm_state.finished = True
                 break
 
