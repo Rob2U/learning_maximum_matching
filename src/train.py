@@ -1,29 +1,30 @@
-import gymnasium as gym
 import logging
+from datetime import datetime
+
+import gymnasium as gym
 from sb3_contrib import MaskablePPO
 from sb3_contrib.common.maskable.utils import get_action_masks, is_masking_supported
-from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3 import PPO
-
-from datetime import datetime
-from args import GlobalArgs
 from simple_parsing import ArgumentParser
-from environment.environment import MSTCodeEnvironment, Transpiler, COMMAND_REGISTRY
-from environment.feedback import reward
+from stable_baselines3 import PPO
+from stable_baselines3.common.env_util import make_vec_env
+
+from args import GlobalArgs
 from environment.commands import (
-    PUSH_MARK,
-    PUSH_LEGAL_EDGES,
-    RESET_EDGE_REGISTER,
-    IF_EDGE_WEIGHT_LT,
-    WRITE_EDGE_REGISTER,
-    POP_EDGE,
-    IF_EDGE_STACK_REMAINING,
-    JUMP,
     ADD_EDGE_TO_SET,
-    POP_MARK,
     IF_EDGE_SET_CAPACITY_REMAINING,
+    IF_EDGE_STACK_REMAINING,
+    IF_EDGE_WEIGHT_LT,
+    JUMP,
+    POP_EDGE,
+    POP_MARK,
+    PUSH_LEGAL_EDGES,
+    PUSH_MARK,
+    RESET_EDGE_REGISTER,
     RET,
+    WRITE_EDGE_REGISTER,
 )
+from environment.environment import COMMAND_REGISTRY, MSTCodeEnvironment, Transpiler
+from environment.feedback import reward
 
 # from simple_parsing import ArgumentParser
 
