@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import List
 
 from simple_parsing.helpers import Serializable  # type: ignore
 
@@ -20,3 +21,6 @@ class GlobalArgs(Serializable):
 
     # REWARDS:
     punish_cap: int = 24
+
+    # MODEL:
+    policy_net: List[int] = field(default_factory=lambda: [256, 256, 256])

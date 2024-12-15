@@ -1,5 +1,5 @@
 # GENERAL
-iterations: 1000000
+iterations: 5000000
 max_code_length: 32
 reset_for_every_run: False
 num_vms_per_env: 10
@@ -14,3 +14,6 @@ min_n: 3
 min_m: 3
 max_n: 3
 max_m: 3
+
+# MODEL
+policy_net: [1024, 1024, 1024]

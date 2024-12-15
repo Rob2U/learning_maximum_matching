@@ -1,5 +1,4 @@
 import heapq
-import logging
 from abc import abstractmethod
 from typing import List, Type
 
