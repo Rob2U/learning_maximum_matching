@@ -72,7 +72,7 @@ def infer_program(
             action, _ = model.predict(observation=state, action_masks=get_action_masks(new_env), deterministic=True)  # type: ignore
         else:
             action, _ = model.predict(state, deterministic=True)  # type: ignore
-        state, is_terminated, is_truncated, _ = new_env.step(action)  # type: ignore
+        state, _, is_terminated, is_truncated, _ = new_env.step(action)  # type: ignore
 
         logging.info(Transpiler.intToCommand([action])[0]())  # type: ignore
 
@@ -94,8 +94,8 @@ if __name__ == "__main__":
     wandb.init(
         # entity="TODO",
         project="constrainedIS",
+        config=dict(global_args),  # type: ignore
     )
-    wandb.config = dict(global_args)  # type: ignore
 
     gym.register("MSTCode-v0", entry_point=MSTCodeEnvironment)  # type: ignore
 
@@ -133,6 +133,13 @@ if __name__ == "__main__":
     logging.info(learned_program_results)
     logging.info(
         f"Average reward: {sum(learned_program_results) / len(learned_program_results)}"
+    )
+    wandb.log(
+        {
+            "result_code": " ".join([str(c()) for c in learned_program]),
+            "result_reward_avg": sum(learned_program_results)
+            / len(learned_program_results),
+        }
     )
 
     # the actual mst implementation

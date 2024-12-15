@@ -6,6 +6,8 @@ import gymnasium as gym
 import numpy as np
 import numpy.typing as npt
 
+import wandb
+
 from .commands import (
     ADD_EDGE_TO_SET,
     ADD_TO_OUT,
@@ -92,6 +94,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         ), "Bad n / m values"
 
         self.reset()
+        self.rewards: List[float] = []
 
     def step(self, action: int) -> Tuple[npt.ArrayLike, float, bool, Dict[str, Any]]:  # type: ignore
         """Execute the action on all VMs and return the new state, reward, and whether the episode is done
@@ -125,13 +128,22 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
             truncateds.append(truncated)
 
         # NOTE(rob2u): the problem are if statements -> solution: use action masking and do not allow return directly after an if statement
-
+        self.rewards.append(sum(rewards) / len(rewards))
         if any(terminals):
             logging.info(
                 "Program written: "
                 + str([str(op()) for op in self.vms[0].vm_state.code])
             )
             logging.info("Reward in Last Step: " + str(rewards[0]))
+            wandb.log(
+                {
+                    "ep_reward": sum(self.rewards),
+                    "ep_reward_on_step_mean": sum(self.rewards) / len(self.rewards),
+                    "ep_last_reward": sum(rewards) / len(rewards),
+                    "ep_len": len(self.rewards),
+                }
+            )
+            self.rewards = []
 
         assert all(
             [val == terminals[0] for val in terminals]
@@ -218,6 +230,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         random.seed(seed)
 
         self.vms = []
+        self.rewards = []
         for _ in range(self.num_vms_per_env):
             n = random.randint(self.min_n, self.max_n)
             m = random.randint(self.min_m, min(n * (n - 1) // 2, self.max_m))

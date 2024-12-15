@@ -19,7 +19,7 @@ def reward(result: Set[Edge], vm_state: VMState) -> float:
         # reward_distance_to_MST,
         reward_correct_edges,
         punish_mst_weight_too_large,
-        # punish_code_length,
+        punish_code_length,
     ]
 
     # TODO(mehdi): implement a mechanism to weight the rewards given a config. Make sure that all rewards are on the same scale so the weights are valid.
@@ -66,7 +66,7 @@ def reward_correct_edges(result: Set[Edge], vm_state: VMState) -> float:
 
 
 def punish_code_length(
-    result: Set[Edge], vm_state: VMState, punish_cap: int = 32
+    result: Set[Edge], vm_state: VMState, punish_cap: int = 24
 ) -> float:
     code_length = len(vm_state.code)
     return (
