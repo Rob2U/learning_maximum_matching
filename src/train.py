@@ -1,8 +1,12 @@
 import logging
+import random
+import sys
 from datetime import datetime
 from typing import Any, Dict, List, Type
 
 import gymnasium as gym
+import numpy as np
+import torch
 from sb3_contrib import MaskablePPO
 from sb3_contrib.common.maskable.utils import get_action_masks, is_masking_supported
 from simple_parsing import ArgumentParser
@@ -36,8 +40,7 @@ time_stamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
-    filename="train_{}.log".format(time_stamp),
-    filemode="w+",
+    stream=sys.stdout,
 )
 logger = logging.getLogger(__name__)
 
@@ -80,8 +83,15 @@ def infer_program(
     return Transpiler.intToCommand([int(a) for a in state])  # type: ignore
 
 
+def seed_all(seed: int = 42) -> None:
+    random.seed(seed)
+    torch.manual_seed(seed)
+    np.random.seed(seed=seed)
+
+
 if __name__ == "__main__":
     # load configuration
+
     parser = ArgumentParser()
     parser.add_argument("--config", type=str, default="configs/config.yaml")
     call_args = parser.parse_args()
@@ -89,10 +99,11 @@ if __name__ == "__main__":
 
     global_args = GlobalArgs.load_yaml(config_path).to_dict()
     logging.info(global_args)
+    seed_all(global_args["seed"])
 
     # Setup WandB:
     wandb.init(
-        # entity="TODO",
+        entity="na_mst_2",
         project="constrainedIS",
         config=dict(global_args),  # type: ignore
     )
@@ -116,9 +127,9 @@ if __name__ == "__main__":
         net_arch=dict(pi=global_args["policy_net"], qf=global_args["policy_net"])
     )
     if global_args["action_masking"]:
-        model = MaskablePPO("MlpPolicy", vec_env, verbose=1, device="cpu", policy_kwargs=policy_kwargs)  # type: ignore
+        model = MaskablePPO("MlpPolicy", vec_env, verbose=1, device="cpu", policy_kwargs=policy_kwargs, gamma=global_args["gamma"], seed=global_args["seed"])  # type: ignore
     else:
-        model = PPO("MlpPolicy", vec_env, verbose=1, device="cpu", policy_kwargs=policy_kwargs)  # type: ignore
+        model = PPO("MlpPolicy", vec_env, verbose=1, device="cpu", policy_kwargs=policy_kwargs, gamma=global_args["gamma"], seed=global_args["seed"])  # type: ignore
 
     model.learn(total_timesteps=global_args["iterations"])
     model.save("ppo_mst_code")

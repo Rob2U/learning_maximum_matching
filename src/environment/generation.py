@@ -5,7 +5,7 @@ from .structure_elements import Graph
 
 
 def generate_graph(
-    n: int, m: int, seed: Union[int, None] = 69, distinct_weights: bool = True
+    n: int, m: int, seed: Union[int, None] = None, distinct_weights: bool = True
 ) -> Graph:
     """Generate a random graph with n nodes and m edges"""
     if seed:
