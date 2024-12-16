@@ -88,6 +88,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         self.max_m = max_m
         self.reset_for_every_run = reset_for_every_run
         self.only_reward_on_ret = only_reward_on_ret
+        self.episode_counter = 0
 
         assert (
             self.min_n <= self.max_n and self.min_m >= self.min_n - 1
@@ -129,12 +130,10 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
 
         # NOTE(rob2u): the problem are if statements -> solution: use action masking and do not allow return directly after an if statement
         self.rewards.append(sum(rewards) / len(rewards))
+
+        self.episode_counter += 1
+
         if any(terminals):
-            logging.info(
-                "Program written: "
-                + str([str(op()) for op in self.vms[0].vm_state.code])
-            )
-            logging.info("Reward in Last Step: " + str(rewards[0]))
             wandb.log(
                 {
                     "ep_reward": sum(self.rewards),
@@ -143,6 +142,19 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
                     "ep_len": len(self.rewards),
                 }
             )
+
+        if self.episode_counter % 100 == 0 and any(terminals):
+            logging.info(
+                "Episode: "
+                + str(self.episode_counter)
+                + " Mean Reward: "
+                + str(sum(self.rewards) / len(self.rewards))
+            )
+            logging.info(
+                "Program written: "
+                + str([str(op()) for op in self.vms[0].vm_state.code])
+            )
+            logging.info("Reward in Last Step: " + str(rewards[0]))
             self.rewards = []
 
         assert all(
@@ -227,7 +239,6 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         """
 
         # NOTE(rob2u): we use standard library random in our Graph generation and here so we use np_random for adaptability
-        random.seed(seed)
 
         self.vms = []
         self.rewards = []

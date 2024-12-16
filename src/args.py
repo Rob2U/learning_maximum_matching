@@ -11,6 +11,7 @@ class GlobalArgs(Serializable):
     reset_for_every_run: bool = False
     action_masking: bool = False
     only_reward_on_ret: bool = True
+    seed: int = 42
 
     # ENVIRONMENT -- GRAPH Generation
     num_vms_per_env: int = 10
@@ -24,3 +25,4 @@ class GlobalArgs(Serializable):
 
     # MODEL:
     policy_net: List[int] = field(default_factory=lambda: [256, 256, 256])
+    gamma: float = 0.999
