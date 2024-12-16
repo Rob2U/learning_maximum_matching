@@ -15,7 +15,7 @@ class AbstractCommand(ABC):
         """Used for action masking: does executing the command have any effect?"""
         pass
 
-    @abstractmethod  # NOTE(rob2u): not sure if necessary
+    @abstractmethod
     def is_comparison(self) -> bool:
         pass
 
