@@ -5,6 +5,12 @@ from typing import List, Type
 from .algorithms import UnionFind, compute_mst
 from .structure_elements import NodeEdgePointer
 from .vm_state import AbstractCommand, VMState
+from .masking_utils import (
+    does_any_command_exist,
+    does_command_exist,
+    are_any_of_last_n_commands_different_to_all,
+    is_last_command_different_to,
+)
 
 ############### ABSTRACT COMMANDS ####################
 
@@ -14,7 +20,9 @@ class ConditionalCommand(AbstractCommand):
 
     def is_applicable(self, state: VMState) -> bool:
         # 2 if commands in a row make sense (its an implies operator) but 3 in a row is just weird.
-        return are_last_n_commands_different_to_all(state.code, CONDITIONAL_COMMANDS, 3)
+        return are_any_of_last_n_commands_different_to_all(
+            state.code, CONDITIONAL_COMMANDS, 3
+        )
 
     def is_comparison(self) -> bool:
         return True
@@ -128,11 +136,10 @@ class WRITE_EDGE_REGISTER(AbstractCommand):
     def is_applicable(self, state: VMState) -> bool:
         # TODO(philipp): this is valid if we will push edges later and jump back to this command
         # TODO(philipp): the only way where it would be valid is if the last command was wrapped in a conditional but then the last action was invalid...
-        # return does_any_command_exist(
-        #     state.code,
-        #     PUSH_EDGE_COMMANDS,
-        # ) and is_last_command_different_to(state.code, WRITE_EDGE_REGISTER)
-        return True
+        return does_any_command_exist(
+            state.code,
+            PUSH_EDGE_COMMANDS,
+        ) and is_last_command_different_to(state.code, WRITE_EDGE_REGISTER)
 
     def is_comparison(self) -> bool:
         return False
@@ -223,11 +230,10 @@ class POP_EDGE(AbstractCommand):
 
     def is_applicable(self, state: VMState) -> bool:
         # TODO(philipp): this is valid if we will push edges later and jump back to this command
-        # return does_any_command_exist(
-        #     state.code,
-        #     PUSH_EDGE_COMMANDS,
-        # )
-        return True
+        return does_any_command_exist(
+            state.code,
+            PUSH_EDGE_COMMANDS,
+        )
 
     def is_comparison(self) -> bool:
         return False
@@ -594,7 +600,6 @@ class COMPUTE_MST(AbstractCommand):
     def __str__(self) -> str:
         return "COMPUTE_MST"
 
-
 PUSH_EDGE_COMMANDS: List[Type[AbstractCommand]] = [PUSH_EDGE, PUSH_LEGAL_EDGES]
 CONDITIONAL_COMMANDS: List[Type[AbstractCommand]] = [
     IF_EDGE_STACK_REMAINING,
@@ -604,35 +609,3 @@ CONDITIONAL_COMMANDS: List[Type[AbstractCommand]] = [
     IF_IS_NOT_FIRST_EDGE,
     IF_HEAP_EMPTY,
 ]
-
-
-def does_any_command_exist(
-    code: List[Type[AbstractCommand]], Commands: List[Type[AbstractCommand]]
-) -> bool:
-    return any(does_command_exist(code, Command) for Command in Commands)
-
-
-def does_command_exist(
-    code: List[Type[AbstractCommand]], Command: Type[AbstractCommand]
-) -> bool:
-    return any(isinstance(c, Command) for c in code)
-
-
-def are_last_n_commands_different_to_all(
-    code: List[Type[AbstractCommand]], Commands: List[Type[AbstractCommand]], n: int
-) -> bool:
-    return all(
-        is_last_command_different_to_all(code[min(0, -i) :], Commands) for i in range(n)
-    )
-
-
-def is_last_command_different_to_all(
-    code: List[Type[AbstractCommand]], Commands: List[Type[AbstractCommand]]
-) -> bool:
-    return all(is_last_command_different_to(code, Command) for Command in Commands)
-
-
-def is_last_command_different_to(
-    code: List[Type[AbstractCommand]], Command: Type[AbstractCommand]
-) -> bool:
-    return len(code) == 0 or not isinstance(code[-1], Command)
