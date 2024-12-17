@@ -43,7 +43,7 @@ ENJOY! (using `python ./src/train.py`)
 
 ### Running on Slurm
 Per experiment we should create a `.sh` file by copying from `batch.sh` or `batch_gpu.sh`. Specify a job-name and required resources.
-Run with `sbatch batch.sh`.
+Run with `sbatch batch.sh`. Find output logs in the `out/` directory.
 
 ## ToDos
 - How to run environment.py? I get errors ImportError: attempted relative import with no known parent package
