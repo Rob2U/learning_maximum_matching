@@ -106,8 +106,8 @@ if __name__ == "__main__":
 
     gym.register("MSTCode-v0", entry_point=MSTCodeEnvironment)  # type: ignore
 
-    # train_env = make_vec_env("MSTCode-v0", env_kwargs=dict(global_args), n_envs=4)  # type: ignore
-    train_env = gym.make("MSTCode-v0", **global_args)  # type: ignore
+    train_env = make_vec_env("MSTCode-v0", env_kwargs=dict(global_args), n_envs=32)  # type: ignore
+    # train_env = gym.make("MSTCode-v0", **global_args)  # type: ignore
 
     # check if masking is supported:
     assert is_masking_supported(
@@ -142,7 +142,9 @@ if __name__ == "__main__":
 
     # Best program during training:
     # get best program of all envs in vec_env
-    best_program = train_env.get_wrapper_attr("best_program")
+    # best_program = train_env.get_wrapper_attr("best_program")
+    best_program = train_env.get_attr("best_program")
+    best_program = max(best_program, key=lambda x: x[0])
     best_program_results = execute_program(
         env_args=global_args, program=best_program[1]
     )
