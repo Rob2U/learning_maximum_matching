@@ -101,7 +101,9 @@ class POP_MARK(AbstractCommand):
             state.mark_stack.pop()
 
     def is_applicable(self, state: VMState) -> bool:
-        return does_command_exist(state.code, PUSH_MARK)
+        return does_command_exist(
+            state.code, PUSH_MARK
+        ) and is_last_command_different_to(state.code, PUSH_MARK)
 
     def is_comparison(self) -> bool:
         return False
@@ -116,7 +118,11 @@ class JUMP(AbstractCommand):
             state.pc = state.mark_stack.pop()
 
     def is_applicable(self, state: VMState) -> bool:
-        return does_command_exist(state.code, PUSH_MARK)
+        # we need to push a pointer somewhere but if the last command is a PUSH_MARK it would be an endless loop
+        # TODO(philipp): this could be even smarter: inbetween the last PUSH_MARK and the JUMP has to be a conditional command, a POP_MARK or a RET otherwise it would always be an endless loop
+        return does_command_exist(
+            state.code, PUSH_MARK
+        ) and is_last_command_different_to(state.code, PUSH_MARK)
 
     def is_comparison(self) -> bool:
         return False
