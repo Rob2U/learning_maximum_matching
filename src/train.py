@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Type
 import gymnasium as gym
 import numpy as np
 import torch
+from gymnasium import Env
 from sb3_contrib import MaskablePPO
 from sb3_contrib.common.maskable.utils import get_action_masks, is_masking_supported
 from simple_parsing import ArgumentParser
@@ -63,23 +64,18 @@ def execute_program(
     return rewards
 
 
-def infer_program(
-    env_args: Dict[str, Any], model: Any, action_masking: bool
-) -> List[Type[AbstractCommand]]:
-    new_env: MSTCodeEnvironment = gym.make("MSTCode-v0", **env_args)  # type: ignore
+def infer_program(env_args: Dict[str, Any], model: Any) -> List[Type[AbstractCommand]]:
+    new_env: Env[Any, Any] = gym.make("MSTCode-v0", **env_args)
     state, _ = new_env.reset()
     is_terminated = False
     is_truncated = False
     while not (is_terminated or is_truncated):
-        if action_masking:
-            action, _ = model.predict(observation=state, action_masks=get_action_masks(new_env), deterministic=True)  # type: ignore
-        else:
-            action, _ = model.predict(state, deterministic=True)  # type: ignore
+        action, _ = model.predict(observation=state, action_masks=get_action_masks(new_env), deterministic=True)  # type: ignore
         state, _, is_terminated, is_truncated, _ = new_env.step(action)  # type: ignore
 
-        logging.info(Transpiler.intToCommand([action])[0]())  # type: ignore
+        # logging.info(Transpiler.intToCommand([action])[0]())  # type: ignore
 
-    new_env.close()
+    new_env.close()  # type: ignore
     return Transpiler.intToCommand([int(a) for a in state])  # type: ignore
 
 
@@ -110,38 +106,29 @@ if __name__ == "__main__":
 
     gym.register("MSTCode-v0", entry_point=MSTCodeEnvironment)  # type: ignore
 
-    vec_env = make_vec_env("MSTCode-v0", env_kwargs=dict(global_args), n_envs=4)  # type: ignore
+    # train_env = make_vec_env("MSTCode-v0", env_kwargs=dict(global_args), n_envs=4)  # type: ignore
+    train_env = gym.make("MSTCode-v0", **global_args)  # type: ignore
 
     # check if masking is supported:
-    if is_masking_supported(vec_env):
-        logging.info("Masking is supported")
-    else:
-        logging.info("Masking is not supported")
-        if global_args["action_masking"]:
-            logging.error(
-                "Action masking is enabled but not supported by the environment"
-            )
-            exit(1)
+    assert is_masking_supported(
+        train_env
+    ), "Action masking not supported by Env but required!"
 
     policy_kwargs = dict(
         net_arch=dict(pi=global_args["policy_net"], qf=global_args["policy_net"])
     )
-    if global_args["action_masking"]:
-        model = MaskablePPO("MlpPolicy", vec_env, verbose=1, device="cpu", policy_kwargs=policy_kwargs, gamma=global_args["gamma"], seed=global_args["seed"])  # type: ignore
-    else:
-        model = PPO("MlpPolicy", vec_env, verbose=1, device="cpu", policy_kwargs=policy_kwargs, gamma=global_args["gamma"], seed=global_args["seed"])  # type: ignore
+
+    model = MaskablePPO("MlpPolicy", train_env, verbose=1, device="cpu", policy_kwargs=policy_kwargs, gamma=global_args["gamma"], seed=global_args["seed"])  # type: ignore
 
     model.learn(total_timesteps=global_args["iterations"])
     model.save("ppo_mst_code")
 
     # check what the model has learned
-    learned_program = infer_program(
-        env_args=global_args, model=model, action_masking=global_args["action_masking"]
-    )
+    learned_program = infer_program(env_args=global_args, model=model)
     learned_program_results = execute_program(global_args, learned_program)
 
     logging.info("Learned program: ")
-    logging.info(learned_program_results)
+    logging.info([str(c()) for c in learned_program])
     logging.info(
         f"Average reward: {sum(learned_program_results) / len(learned_program_results)}"
     )
@@ -150,6 +137,25 @@ if __name__ == "__main__":
             "result_code": " ".join([str(c()) for c in learned_program]),
             "result_reward_avg": sum(learned_program_results)
             / len(learned_program_results),
+        }
+    )
+
+    # Best program during training:
+    # get best program of all envs in vec_env
+    best_program = train_env.get_wrapper_attr("best_program")
+    best_program_results = execute_program(
+        env_args=global_args, program=best_program[1]
+    )
+
+    logging.info("Best program during train: ")
+    logging.info([str(c()) for c in best_program[1]])
+    logging.info(
+        f"Average reward: {sum(best_program_results) / len(best_program_results)}"
+    )
+    wandb.log(
+        {
+            "best_code": ("[ " + ", ".join([str(c()) for c in best_program[1]]) + " ]"),
+            "best_reward_avg": sum(best_program_results) / len(best_program_results),
         }
     )
 
@@ -200,7 +206,7 @@ if __name__ == "__main__":
     our_program_results = execute_program(global_args, our_program)
 
     logging.info("Our program:")
-    logging.info(our_program_results)
+    logging.info([str(c()) for c in our_program])  # type: ignore
     logging.info(
         f"Average reward: {sum(our_program_results) / len(our_program_results)}"
     )

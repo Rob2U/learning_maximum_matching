@@ -37,6 +37,7 @@ from .commands import (
     TO_NEIGHBOR,
     WRITE_EDGE_REGISTER,
     WRITE_EDGE_WEIGHT,
+    ConditionalCommand,
 )
 from .feedback import reward
 from .generation import generate_graph
@@ -47,26 +48,29 @@ from .vm_state import AbstractCommand
 class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
     def __init__(
         self,
-        max_code_length: int = 128,
+        max_code_length: int = 32,
         reset_for_every_run: bool = False,
-        num_vms_per_env: int = 1,
+        num_vms_per_env: int = 100,
         min_n: int = 3,
         max_n: int = 3,
         min_m: int = 3,
         max_m: int = 3,
         only_reward_on_ret: bool = True,
+        action_masking: bool = True,
         **kwargs: Any,
     ) -> None:
         """Initializes the environment
 
         Args:
-            max_code_length: The maximum length of the code. Defaults to 128.
+            max_code_length: The maximum length of the code. Defaults to 32.
             reset_for_every_run: Only keep the code / state for every single call to run. Reset VM(s) + Generate new graph for every run(). Defaults to False.
             num_vms_per_env: The number of virtual machines to run. This is somewhat equivalent to the number of graphs we evaluate per run(). Defaults to 1.
             min_n: The minimum number of nodes in the graph. Defaults to 3.
             max_n: The maximum number of nodes in the graph. Defaults to 3.
             min_m: The minimum number of edges in the graph. Defaults to 3.
             max_m: The maximum number of edges in the graph. Defaults to 3.
+            only_reward_on_ret: Toggles if the reward should only be returned when the predicted ACTION was RET.
+            action_masking: Toggles if we want to use strong action masking (if False we also use action masking but only for branches)
         """
 
         super().__init__()
@@ -88,6 +92,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         self.max_m = max_m
         self.reset_for_every_run = reset_for_every_run
         self.only_reward_on_ret = only_reward_on_ret
+        self.action_masking = action_masking
         self.episode_counter = 0
 
         assert (
@@ -96,6 +101,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
 
         self.reset()
         self.rewards: List[float] = []
+        self.best_program: Tuple[float, List[Type[AbstractCommand]]] = (-1.0, [])
 
     def step(self, action: int) -> Tuple[npt.ArrayLike, float, bool, Dict[str, Any]]:  # type: ignore
         """Execute the action on all VMs and return the new state, reward, and whether the episode is done
@@ -133,6 +139,9 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
 
         self.episode_counter += 1
 
+        if sum(rewards) / len(rewards) > self.best_program[0]:
+            self.best_program = (sum(rewards) / len(rewards), self.vms[0].vm_state.code)
+
         if any(terminals):
             wandb.log(
                 {
@@ -152,9 +161,11 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
             )
             logging.info(
                 "Program written: "
-                + str([str(op()) for op in self.vms[0].vm_state.code])
+                + "[ "
+                + ", ".join([str(op()) for op in self.vms[0].vm_state.code])
+                + " ]"
             )
-            logging.info("Reward in Last Step: " + str(rewards[0]))
+            logging.info("Reward in Last Step: " + str(sum(rewards) / len(rewards)))
             self.rewards = []
 
         assert all(
@@ -215,9 +226,19 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
 
     def action_masks(self) -> npt.ArrayLike:
         mask = np.zeros(len(COMMAND_REGISTRY), dtype=int)
-
-        for i, Command in enumerate(COMMAND_REGISTRY):
-            mask[i] = Command().is_applicable(self.vms[0].vm_state)
+        if self.action_masking:
+            for i, Command in enumerate(COMMAND_REGISTRY):
+                mask[i] = Command().is_applicable(self.vms[0].vm_state)
+        else:
+            mask = mask + 1
+            mask[Transpiler.commandToInt([RET])[0]] = (
+                1
+                if not (
+                    len(self.vms[0].vm_state.code) > 0
+                    and issubclass(self.vms[0].vm_state.code[-1], ConditionalCommand)
+                )
+                else 0
+            )
 
         return mask
 

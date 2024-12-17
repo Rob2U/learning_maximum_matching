@@ -1,4 +1,5 @@
 from typing import List, Type
+
 from .vm_state import AbstractCommand
 
 
@@ -13,7 +14,7 @@ def does_command_exist(
     code: List[Type[AbstractCommand]], Command: Type[AbstractCommand]
 ) -> bool:
     """Check if the given command exists anywhere in the code."""
-    return any(isinstance(c, Command) for c in code)
+    return any([command == Command for command in code])
 
 
 def are_any_of_last_n_commands_different_to_all(
@@ -37,4 +38,4 @@ def is_last_command_different_to(
     code: List[Type[AbstractCommand]], Command: Type[AbstractCommand]
 ) -> bool:
     """Check if the last command in the code is different to the given command."""
-    return len(code) == 0 or not isinstance(code[-1], Command)
+    return len(code) == 0 or not code[-1] == Command
