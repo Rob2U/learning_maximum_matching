@@ -140,7 +140,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         if sum(rewards) / len(rewards) > self.best_program[0]:
             self.best_program = (sum(rewards) / len(rewards), self.vms[0].vm_state.code)
 
-        if self.episode_counter % 100 == 0 and any(terminals):
+        if self.episode_counter % 10000 == 0 and any(terminals):
             logging.info(
                 "Episode: "
                 + str(self.episode_counter)
