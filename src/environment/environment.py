@@ -6,8 +6,6 @@ import gymnasium as gym
 import numpy as np
 import numpy.typing as npt
 
-import wandb
-
 from .commands import (
     ADD_EDGE_TO_SET,
     ADD_TO_OUT,
@@ -93,14 +91,14 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         self.reset_for_every_run = reset_for_every_run
         self.only_reward_on_ret = only_reward_on_ret
         self.action_masking = action_masking
-        self.episode_counter = 0
+        self.episode_counter: int = 0
+        self.current_episode_rewards: List[float] = []
 
         assert (
             self.min_n <= self.max_n and self.min_m >= self.min_n - 1
         ), "Bad n / m values"
 
         self.reset()
-        self.rewards: List[float] = []
         self.best_program: Tuple[float, List[Type[AbstractCommand]]] = (-1.0, [])
 
     def step(self, action: int) -> Tuple[npt.ArrayLike, float, bool, Dict[str, Any]]:  # type: ignore
@@ -134,30 +132,23 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
             terminals.append(terminal)
             truncateds.append(truncated)
 
-        # NOTE(rob2u): the problem are if statements -> solution: use action masking and do not allow return directly after an if statement
-        self.rewards.append(sum(rewards) / len(rewards))
+        self.current_episode_rewards.append(sum(rewards) / len(rewards))
 
-        self.episode_counter += 1
+        if any(terminals):
+            self.episode_counter += 1
 
         if sum(rewards) / len(rewards) > self.best_program[0]:
             self.best_program = (sum(rewards) / len(rewards), self.vms[0].vm_state.code)
-
-        if any(terminals):
-            wandb.log(
-                {
-                    "ep_reward": sum(self.rewards),
-                    "ep_reward_on_step_mean": sum(self.rewards) / len(self.rewards),
-                    "ep_last_reward": sum(rewards) / len(rewards),
-                    "ep_len": len(self.rewards),
-                }
-            )
 
         if self.episode_counter % 100 == 0 and any(terminals):
             logging.info(
                 "Episode: "
                 + str(self.episode_counter)
                 + " Mean Reward: "
-                + str(sum(self.rewards) / len(self.rewards))
+                + str(
+                    sum(self.current_episode_rewards)
+                    / len(self.current_episode_rewards)
+                )
             )
             logging.info(
                 "Program written: "
@@ -166,7 +157,6 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
                 + " ]"
             )
             logging.info("Reward in Last Step: " + str(sum(rewards) / len(rewards)))
-            self.rewards = []
 
         assert all(
             [val == terminals[0] for val in terminals]
@@ -262,7 +252,8 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         # NOTE(rob2u): we use standard library random in our Graph generation and here so we use np_random for adaptability
 
         self.vms = []
-        self.rewards = []
+        self.current_episode_rewards = []
+
         for _ in range(self.num_vms_per_env):
             n = random.randint(self.min_n, self.max_n)
             m = random.randint(self.min_m, min(n * (n - 1) // 2, self.max_m))

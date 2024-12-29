@@ -11,8 +11,9 @@ from gymnasium import Env
 from sb3_contrib import MaskablePPO
 from sb3_contrib.common.maskable.utils import get_action_masks, is_masking_supported
 from simple_parsing import ArgumentParser
-from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.vec_env import SubprocVecEnv
+from wandb.integration.sb3 import WandbCallback
 
 import wandb
 from args import GlobalArgs
@@ -34,6 +35,7 @@ from environment.environment import COMMAND_REGISTRY, MSTCodeEnvironment, Transp
 from environment.feedback import reward
 from environment.vm_state import AbstractCommand
 
+# from environment.wandb_logger import WandbLoggingCallback
 # from simple_parsing import ArgumentParser
 
 # Configure logging
@@ -98,7 +100,7 @@ if __name__ == "__main__":
     seed_all(global_args["seed"])
 
     # Setup WandB:
-    wandb.init(
+    wandb_run = wandb.init(
         entity="na_mst_2",
         project="constrainedIS",
         config=dict(global_args),  # type: ignore
@@ -106,8 +108,14 @@ if __name__ == "__main__":
 
     gym.register("MSTCode-v0", entry_point=MSTCodeEnvironment)  # type: ignore
 
-    train_env = make_vec_env("MSTCode-v0", env_kwargs=dict(global_args), n_envs=32)  # type: ignore
-    # train_env = gym.make("MSTCode-v0", **global_args)  # type: ignore
+    def get_env(**kwargs: Any) -> MSTCodeEnvironment:
+        return MSTCodeEnvironment(**kwargs)
+
+    train_env: MSTCodeEnvironment | SubprocVecEnv
+    if global_args["vectorize_environment"]:
+        train_env = make_vec_env(get_env, env_kwargs=global_args, n_envs=global_args["num_envs"], vec_env_cls=SubprocVecEnv)  # type: ignore
+    else:
+        train_env = gym.make("MSTCode-v0", **global_args)  # type: ignore
 
     # check if masking is supported:
     assert is_masking_supported(
@@ -118,9 +126,13 @@ if __name__ == "__main__":
         net_arch=dict(pi=global_args["policy_net"], qf=global_args["policy_net"])
     )
 
-    model = MaskablePPO("MlpPolicy", train_env, verbose=1, device="cpu", policy_kwargs=policy_kwargs, gamma=global_args["gamma"], seed=global_args["seed"])  # type: ignore
+    model = MaskablePPO("MlpPolicy", train_env, verbose=1, device="cuda", policy_kwargs=policy_kwargs, gamma=global_args["gamma"], seed=global_args["seed"], batch_size=global_args["batch_size"], learning_rate=global_args["learning_rate"])  # type: ignore
 
-    model.learn(total_timesteps=global_args["iterations"])
+    # model.learn(total_timesteps=global_args["iterations"], callback=WandbLoggingCallback(wandb_run), )  # type: ignore
+    model.learn(
+        total_timesteps=global_args["iterations"],
+        callback=WandbCallback(),
+    )  # type: ignore
     model.save("ppo_mst_code")
 
     # check what the model has learned
@@ -143,8 +155,12 @@ if __name__ == "__main__":
     # Best program during training:
     # get best program of all envs in vec_env
     # best_program = train_env.get_wrapper_attr("best_program")
-    best_program = train_env.get_attr("best_program")
-    best_program = max(best_program, key=lambda x: x[0])
+    if global_args["vectorize_environment"]:
+        best_program = train_env.get_attr("best_program")  # type: ignore
+        best_program = max(best_program, key=lambda x: x[0])
+    else:
+        best_program = train_env.best_program  # type: ignore
+
     best_program_results = execute_program(
         env_args=global_args, program=best_program[1]
     )

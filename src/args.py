@@ -12,6 +12,8 @@ class GlobalArgs(Serializable):
     action_masking: bool = False
     only_reward_on_ret: bool = True
     seed: int = 42
+    vectorize_environment: bool = True
+    num_envs: int = 32  # NOTE(rob2u): automatically set to 1 if not vectorized
 
     # ENVIRONMENT -- GRAPH Generation
     num_vms_per_env: int = 10
@@ -25,4 +27,6 @@ class GlobalArgs(Serializable):
 
     # MODEL:
     policy_net: List[int] = field(default_factory=lambda: [256, 256, 256])
-    gamma: float = 0.999
+    gamma: float = 0.99
+    batch_size: int = 4096
+    learning_rate: float = 1e-5
