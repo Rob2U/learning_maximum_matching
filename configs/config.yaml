@@ -1,8 +1,8 @@
 # GENERAL
-iterations: 1000000
+iterations: 100
 max_code_length: 32
 reset_for_every_run: False
-num_vms_per_env: 10
+num_vms_per_env: 100
 action_masking: True
 
 # REWARDs

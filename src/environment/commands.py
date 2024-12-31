@@ -3,14 +3,14 @@ from abc import abstractmethod
 from typing import List, Type
 
 from .algorithms import UnionFind, compute_mst
-from .structure_elements import NodeEdgePointer
-from .vm_state import AbstractCommand, VMState
 from .masking_utils import (
+    are_any_of_last_n_commands_different_to_all,
     does_any_command_exist,
     does_command_exist,
-    are_any_of_last_n_commands_different_to_all,
     is_last_command_different_to,
 )
+from .structure_elements import NodeEdgePointer
+from .vm_state import AbstractCommand, VMState
 
 ############### ABSTRACT COMMANDS ####################
 
@@ -610,6 +610,7 @@ class COMPUTE_MST(AbstractCommand):
 
     def __str__(self) -> str:
         return "COMPUTE_MST"
+
 
 PUSH_EDGE_COMMANDS: List[Type[AbstractCommand]] = [PUSH_EDGE, PUSH_LEGAL_EDGES]
 CONDITIONAL_COMMANDS: List[Type[AbstractCommand]] = [

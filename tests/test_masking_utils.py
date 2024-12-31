@@ -1,12 +1,13 @@
 import pytest
+
 from environment.masking_utils import (
+    are_any_of_last_n_commands_different_to_all,
     does_any_command_exist,
     does_command_exist,
-    are_any_of_last_n_commands_different_to_all,
-    is_last_command_different_to_all,
     is_last_command_different_to,
+    is_last_command_different_to_all,
 )
-from environment.vm_state import VMState, AbstractCommand
+from environment.vm_state import AbstractCommand, VMState
 
 
 # Mock commands for testing
@@ -67,48 +68,46 @@ class CommandD(AbstractCommand):  # type: ignore
 
 
 def test_does_any_command_exist() -> None:
-    code = [CommandA(), CommandB(), CommandC()]
-    assert does_any_command_exist(code, [CommandA, CommandB]) == True
-    assert does_any_command_exist(code, [CommandA, CommandD]) == True
-    assert does_any_command_exist(code, [CommandD, CommandB]) == True
-    assert does_any_command_exist(code, [CommandD]) == False
+    code = [CommandA, CommandB, CommandC]
+    assert does_any_command_exist(code, [CommandA, CommandB])
+    assert does_any_command_exist(code, [CommandA, CommandD])
+    assert does_any_command_exist(code, [CommandD, CommandB])
+    assert not does_any_command_exist(code, [CommandD])
 
 
 def test_does_command_exist() -> None:
-    code = [CommandA(), CommandB(), CommandC()]
-    assert does_command_exist(code, CommandA) == True
-    assert does_command_exist(code, CommandD) == False
+    code = [CommandA, CommandB, CommandC]
+    assert does_command_exist(code, CommandA)
+    assert not does_command_exist(code, CommandD)
 
 
 def test_are_any_of_last_n_commands_different_to_all() -> None:
-    code = [CommandA(), CommandB(), CommandC()]
-    assert (
-        are_any_of_last_n_commands_different_to_all(code, [CommandB, CommandC], 2)
-        == False
+    code = [CommandA, CommandB, CommandC]
+    assert not are_any_of_last_n_commands_different_to_all(
+        code, [CommandB, CommandC], 2
     )
-    assert are_any_of_last_n_commands_different_to_all(code, [CommandC], 2) == True
-    assert are_any_of_last_n_commands_different_to_all(code, [CommandC], 1) == False
-    assert are_any_of_last_n_commands_different_to_all(code, [CommandD], 1) == True
-    assert are_any_of_last_n_commands_different_to_all(code, [CommandD], 10) == True
-    assert (
+    assert are_any_of_last_n_commands_different_to_all(code, [CommandC], 2)
+    assert not are_any_of_last_n_commands_different_to_all(code, [CommandC], 1)
+    assert are_any_of_last_n_commands_different_to_all(code, [CommandD], 1)
+    assert are_any_of_last_n_commands_different_to_all(code, [CommandD], 10)
+    assert not (
         are_any_of_last_n_commands_different_to_all(
             code, [CommandA, CommandB, CommandC], 10
         )
-        == False
     )
 
 
 def test_is_last_command_different_to_all() -> None:
-    code = [CommandA(), CommandB(), CommandC()]
-    assert is_last_command_different_to_all(code, [CommandA, CommandB]) == True
-    assert is_last_command_different_to_all(code, [CommandC]) == False
-    assert is_last_command_different_to_all(code, [CommandC, CommandA]) == False
+    code = [CommandA, CommandB, CommandC]
+    assert is_last_command_different_to_all(code, [CommandA, CommandB])
+    assert not is_last_command_different_to_all(code, [CommandC])
+    assert not is_last_command_different_to_all(code, [CommandC, CommandA])
 
 
 def test_is_last_command_different_to() -> None:
-    code = [CommandA(), CommandB(), CommandC()]
-    assert is_last_command_different_to(code, CommandA) == True
-    assert is_last_command_different_to(code, CommandC) == False
+    code = [CommandA, CommandB, CommandC]
+    assert is_last_command_different_to(code, CommandA)
+    assert not is_last_command_different_to(code, CommandC)
 
 
 if __name__ == "__main__":

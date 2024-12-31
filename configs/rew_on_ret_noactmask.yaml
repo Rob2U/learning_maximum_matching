@@ -1,10 +1,9 @@
 # GENERAL
-iterations: 1000000
+iterations: 400000
 max_code_length: 32
 reset_for_every_run: False
 num_vms_per_env: 100
-action_masking: True
-vectorize_environment: True
+action_masking: False
 
 # REWARDs
 only_reward_on_ret: True
@@ -17,4 +16,4 @@ max_n: 3
 max_m: 3
 
 # MODEL
-policy_net: [1024, 1024, 1024, 1024, 1024, 1024]
+policy_net: [1024, 1024, 1024, 1024, 1024]
