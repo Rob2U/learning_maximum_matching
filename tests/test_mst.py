@@ -106,3 +106,59 @@ def test_simple_prims_algorithm(n_nodes: int, m_edges: int) -> None:
     assert (
         mst_weight == expected_mst_weight
     ), f"Expected MST weight {expected_mst_weight}, but got {mst_weight}"
+
+
+@pytest.mark.parametrize("n_nodes, m_edges", [(10, 45), (20, 150), (30, 417)])
+def test_first_generated_algorithm(n_nodes: int, m_edges: int) -> None:
+    # Generate a test graph
+    test_graph = generate_graph(n_nodes, m_edges)
+
+    # Define the Prim's algorithm instructions
+    code = [
+        PUSH_LEGAL_EDGES,
+        WRITE_EDGE_REGISTER,
+        IF_EDGE_WEIGHT_LT,
+        WRITE_EDGE_REGISTER,
+        POP_EDGE,
+        IF_EDGE_WEIGHT_LT,
+        WRITE_EDGE_REGISTER,
+        ADD_EDGE_TO_SET,
+        PUSH_LEGAL_EDGES,
+        PUSH_LEGAL_EDGES,
+        ADD_EDGE_TO_SET,
+        POP_EDGE,
+        ADD_EDGE_TO_SET,
+        POP_EDGE,
+        POP_EDGE,
+        POP_EDGE,
+        PUSH_LEGAL_EDGES,
+        WRITE_EDGE_REGISTER,
+        POP_EDGE,
+        IF_EDGE_WEIGHT_LT,
+        WRITE_EDGE_REGISTER,
+        PUSH_LEGAL_EDGES,
+        PUSH_LEGAL_EDGES,
+        ADD_EDGE_TO_SET,
+        IF_EDGE_WEIGHT_LT,
+        PUSH_LEGAL_EDGES,
+        PUSH_LEGAL_EDGES,
+        PUSH_LEGAL_EDGES,
+        PUSH_LEGAL_EDGES,
+        RET,
+    ]
+
+    # Create a virtual machine and run the code
+    test_graph = generate_graph(3, 3)
+    vm = VirtualMachine(code, test_graph, verbose=False)
+    result, vm_state = vm.run()
+    infinite = vm_state.timeout
+
+    # Check if the result is not infinite
+    assert not infinite, "Max instructions reached."
+
+    # Check if the result is a valid MST
+    mst_weight = sum(edge.weight for edge in result)
+    expected_mst_weight = sum(edge.weight for edge in compute_mst(test_graph))
+    assert (
+        mst_weight == expected_mst_weight
+    ), f"Expected MST weight {expected_mst_weight}, but got {mst_weight}"

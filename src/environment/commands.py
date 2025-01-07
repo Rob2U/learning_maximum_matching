@@ -178,8 +178,11 @@ class ADD_EDGE_TO_SET(AbstractCommand):
             state.edge_set.add(state.edge_register)
 
     def is_applicable(self, state: VMState) -> bool:
+        # TODO(philipp): this only makes sense if there was a WRITE_EDGE_REGISTER after the last ADD_EDGE_TO_SET
         # TODO(philipp): the only way where it would be valid is if the last command was wrapped in a conditional but then the last action was invalid...
-        return is_last_command_different_to(state.code, ADD_EDGE_TO_SET)
+        return is_last_command_different_to(
+            state.code, ADD_EDGE_TO_SET
+        ) and does_command_exist(state.code, WRITE_EDGE_REGISTER)
 
     def is_comparison(self) -> bool:
         return False
@@ -264,7 +267,9 @@ class IF_EDGE_STACK_REMAINING(ConditionalCommand):
 
 
 class IF_EDGE_WEIGHT_LT(ConditionalCommand):
-    """Compares the weight of the edge on the stack with the value register. If the weight is less than the value register, the next command is executed."""
+    """Compares the weight of the edge on the top of the stack with the value register.
+    If the weight of the edge on top of the stack is less than the value register, the next command is executed.
+    """
 
     def condition(self, state: VMState) -> bool:
         return not state.edge_register or (
