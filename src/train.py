@@ -13,7 +13,6 @@ from sb3_contrib.common.maskable.utils import get_action_masks, is_masking_suppo
 from simple_parsing import ArgumentParser
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv
-from wandb.integration.sb3 import WandbCallback
 
 import wandb
 from args import GlobalArgs
@@ -34,8 +33,11 @@ from environment.commands import (
 from environment.environment import COMMAND_REGISTRY, MSTCodeEnvironment, Transpiler
 from environment.feedback import reward
 from environment.vm_state import AbstractCommand
+from environment.wandb_logger import WandbLoggingCallback
+from models.policy_nets import CustomActorCriticPolicy
+from models.transformer_fe import TransformerFeaturesExtractor
 
-# from environment.wandb_logger import WandbLoggingCallback
+# from wandb.integration.sb3 import WandbCallback
 # from simple_parsing import ArgumentParser
 
 # Configure logging
@@ -122,16 +124,40 @@ if __name__ == "__main__":
         train_env
     ), "Action masking not supported by Env but required!"
 
+    feature_dim = global_args["feature_dim"]
+    d_model = global_args["fe_d_model"]
+    nhead = global_args["fe_nhead"]
+    num_blocks = global_args["fe_num_blocks"]
+    num_instructions = len(COMMAND_REGISTRY)
+    program_length = global_args["max_code_length"]
+    layer_dim_pi = global_args["layer_dim_pi"]
+    layer_dim_vf = global_args["layer_dim_vf"]
+
     policy_kwargs = dict(
-        net_arch=dict(pi=global_args["policy_net"], qf=global_args["policy_net"])
+        features_extractor_class=TransformerFeaturesExtractor,  # type: ignore
+        features_extractor_kwargs=dict(
+            features_dim=feature_dim,
+            d_model=d_model,
+            nhead=nhead,
+            num_blocks=num_blocks,
+            num_instructions=num_instructions,
+            program_length=program_length,
+            device=global_args["device"],
+        ),
+        # MLP layers for actor and critic after the transformer:
+        feature_dim=feature_dim,
+        layer_dim_pi=layer_dim_pi,
+        layer_dim_vf=layer_dim_vf,
     )
 
-    model = MaskablePPO("MlpPolicy", train_env, verbose=1, device="cuda", policy_kwargs=policy_kwargs, gamma=global_args["gamma"], seed=global_args["seed"], batch_size=global_args["batch_size"], learning_rate=global_args["learning_rate"])  # type: ignore
+    model = MaskablePPO(CustomActorCriticPolicy, train_env, verbose=1, device=global_args["device"], policy_kwargs=policy_kwargs, gamma=global_args["gamma"], seed=global_args["seed"], batch_size=global_args["batch_size"], learning_rate=global_args["learning_rate"])  # type: ignore
 
-    # model.learn(total_timesteps=global_args["iterations"], callback=WandbLoggingCallback(wandb_run), )  # type: ignore
+    logging.info("Policy network overview:")
+    logging.info(model.policy)
+
     model.learn(
         total_timesteps=global_args["iterations"],
-        callback=WandbCallback(verbose=1, log="all"),
+        callback=WandbLoggingCallback(wandb_run),
     )  # type: ignore
     model.save("ppo_mst_code")
 

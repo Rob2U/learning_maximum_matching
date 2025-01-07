@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List
 
+import torch
 from simple_parsing.helpers import Serializable  # type: ignore
 
 
@@ -13,10 +14,11 @@ class GlobalArgs(Serializable):
     only_reward_on_ret: bool = True
     seed: int = 42
     vectorize_environment: bool = True
-    num_envs: int = 32  # NOTE(rob2u): automatically set to 1 if not vectorized
+    num_envs: int = 16  # NOTE(rob2u): automatically set to 1 if not vectorized
+    device: str = "cuda" if torch.cuda.is_available() else "cpu"
 
     # ENVIRONMENT -- GRAPH Generation
-    num_vms_per_env: int = 10
+    num_vms_per_env: int = 100
     min_n: int = 3
     min_m: int = 3
     max_n: int = 3
@@ -26,7 +28,16 @@ class GlobalArgs(Serializable):
     punish_cap: int = 24
 
     # MODEL:
-    policy_net: List[int] = field(default_factory=lambda: [256, 256, 256])
+    # Transformer Features Extractor
+    fe_d_model: int = 64
+    fe_nhead: int = 4
+    fe_num_blocks: int = 4
+
+    # General policy network
+    feature_dim: int = 64
+    layer_dim_pi: int = 64
+    layer_dim_vf: int = 64
+
     gamma: float = 0.99
-    batch_size: int = 4096
-    learning_rate: float = 1e-5
+    batch_size: int = 64
+    learning_rate: float = 3e-4

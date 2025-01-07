@@ -18,13 +18,39 @@ def reward(result: Set[Edge], vm_state: VMState) -> float:
         # reward_efficiency,
         # reward_distance_to_MST,
         reward_correct_edges,
+        # reward_connected,
         punish_mst_weight_too_large,
         # punish_code_length,
+        # f1_score_mst,
     ]
 
     # TODO(mehdi): implement a mechanism to weight the rewards given a config. Make sure that all rewards are on the same scale so the weights are valid.
 
     return sum(reward(result, vm_state) for reward in rewards)
+
+
+def f1_score_mst(result: Set[Edge], vm_state: VMState) -> float:
+    mst = compute_mst(vm_state.input)
+    true_positives = len(result.intersection(mst))
+    false_positives = len(result.difference(mst))
+    false_negatives = len(mst.difference(result))
+
+    recall: float
+    precision: float
+    if (true_positives + false_negatives) != 0:
+        recall = true_positives / (true_positives + false_negatives)
+    else:
+        recall = 1.0
+
+    if (true_positives + false_positives) != 0:
+        precision = true_positives / (true_positives + false_positives)
+    else:
+        precision = 1.0
+
+    if precision + recall == 0:
+        return 0.0
+
+    return 2 * (precision * recall) / (precision + recall)
 
 
 def punish_mst_weight_too_large(result: Set[Edge], vm_state: VMState) -> float:
@@ -89,7 +115,19 @@ def reward_valid_spanning_tree_length(result: Set[Edge], vm_state: VMState) -> f
 # Checks that the returned edge set is a spanning tree (i.e. connected, no cycles and it spans all nodes)
 def reward_connected(result: Set[Edge], vm_state: VMState) -> float:
     # TODO(mehdi): Implement this. i.e. number of unconnected graphs, distance between unconnected graphs, sizes of unconnected graphs?
-    return 0.0
+
+    # HACK HACK HACK
+    # THIS CODE IS BAD AND SHOULD BE REPLACED BUT OK FOR SIZE 3 GRAPHS
+    connected_nodes = set()
+    connected_nodes.add(vm_state.input.nodes[0])
+
+    for edge in result:
+        for edge in result:
+            if edge.u in connected_nodes or edge.v in connected_nodes:
+                connected_nodes.add(edge.u)
+                connected_nodes.add(edge.v)
+
+    return len(connected_nodes) / len(vm_state.input.nodes)
 
 
 def reward_no_cycles(result: Set[Edge], vm_state: VMState) -> float:

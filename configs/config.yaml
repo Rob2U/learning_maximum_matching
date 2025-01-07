@@ -1,9 +1,10 @@
 # GENERAL
-iterations: 100
+iterations: 250000
 max_code_length: 32
 reset_for_every_run: False
 num_vms_per_env: 100
 action_masking: True
+vectorize_environment: False
 
 # REWARDs
 only_reward_on_ret: False
@@ -16,4 +17,11 @@ max_n: 3
 max_m: 3
 
 # MODEL
-policy_net: [1024, 1024, 1024, 1024, 1024]
+gamma: 0.99
+layer_dim_pi: 128
+layer_dim_vf: 128
+feature_dim: 128
+
+fe_d_model: 128
+fe_nhead: 4
+fe_num_blocks: 4

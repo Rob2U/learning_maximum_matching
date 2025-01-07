@@ -81,7 +81,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
             len(COMMAND_REGISTRY)
         )  # action_space contains all the possible instructions for the next line
         self.observation_space = gym.spaces.MultiDiscrete(
-            [len(COMMAND_REGISTRY) + 1] * self.max_code_length
+            [len(COMMAND_REGISTRY)] * self.max_code_length
         )
 
         self.min_n = min_n
