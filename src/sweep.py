@@ -55,7 +55,7 @@ def train() -> None:
 
 def main() -> None:
     # Create the sweep on WandB
-    sweep_id = wandb.sweep(SWEEP_CONFIG, project="my_mst_project")
+    sweep_id = wandb.sweep(SWEEP_CONFIG, entity="na_mst_2", project="constrainedIS")
     # Launch the sweep agent: this will repeatedly call `train()` above
     wandb.agent(sweep_id, function=train)
 
