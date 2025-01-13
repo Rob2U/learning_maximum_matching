@@ -30,12 +30,12 @@ def train() -> None:
     wandb.init()
     # 2) Extract hyperparameters from wandb.config
     learning_rate = wandb.config.learning_rate
-    exploration_rate = wandb.config.exploration_rate
+    gamma = wandb.config.gamma
 
     # 3) Copy your base config and override relevant fields
     base_args = GlobalArgs.load_yaml("configs/config.yaml").to_dict()
     base_args["learning_rate"] = learning_rate
-    base_args["exploration_rate"] = exploration_rate
+    base_args["gamma"] = gamma
 
     # 4) Store the new config as a temporary file
     tmp_config_path = Path("configs/tmp_sweep_config.yaml")
