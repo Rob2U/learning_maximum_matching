@@ -19,8 +19,8 @@ SWEEP_CONFIG = {
         "goal": "maximize",
     },
     "parameters": {
-        "learning_rate": {"values": [1e-3, 1e-4, 1e-5]},
-        "exploration_rate": {"values": [0.1, 0.2, 0.3]},
+        "learning_rate": {"values": [1e-3, 5e-4, 1e-4, 5e-5, 1e-5]},
+        "gamma": {"values": [0.99, 0.999, 0.9999, 0.99999, 0.999999]},
     },
 }
 
