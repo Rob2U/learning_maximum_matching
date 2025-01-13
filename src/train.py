@@ -185,7 +185,7 @@ if __name__ == "__main__":
         best_program = train_env.get_attr("best_program")  # type: ignore
         best_program = max(best_program, key=lambda x: x[0])
     else:
-        best_program = train_env.best_program  # type: ignore
+        best_program = train_env.unwrapped.best_program  # type: ignore
 
     best_program_results = execute_program(
         env_args=global_args, program=best_program[1]
