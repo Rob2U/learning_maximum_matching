@@ -9,13 +9,13 @@ from args import GlobalArgs
 #  2) Defines a "train" function that calls train.py with the hyperparameters from wandb.config
 #  3) Launches the sweep agent locally to run the experiments
 
-# (Make sure you have `pip install wandb` and are logged in with `wandb login`)
+# Usage: python src/sweep.py (from the root of the repository. This way the default config.yaml is loaded correctly)
 
 SWEEP_CONFIG = {
     "name": "learning_and_exploration_sweep",
     "method": "bayes",  # or "random", "bayes"
     "metric": {
-        "name": "reward",  # The metric name you log in train.py (e.g., wandb.log({"reward": ...}))
+        "name": "best_reward_avg",
         "goal": "maximize",
     },
     "parameters": {
