@@ -43,12 +43,14 @@ def train() -> None:
         GlobalArgs(**base_args).dump_yaml(f)
 
     # 5) Call train.py with this config
-    subprocess.run(
-        [sys.executable, "src/train.py", "--config", str(tmp_config_path)], check=True
-    )
-
-    # 6) Clean up
-    tmp_config_path.unlink()
+    try:
+        subprocess.run(
+            [sys.executable, "src/train.py", "--config", str(tmp_config_path)],
+            check=True,
+        )
+    finally:
+        # 6) Clean up
+        tmp_config_path.unlink()
 
 
 def main() -> None:
