@@ -1,6 +1,6 @@
 #!/bin/bash
 # wandb: Run sweep agent with: wandb agent ...
-$(wandb sweep ./configs/sweep.yaml) >temp_output.txt 2>&1
+$(wandb sweep "configs/sweep.yaml") >temp_output.txt 2>&1
 
 SWEEP_ID=$(awk '/wandb agent/{ match($0, /wandb agent (.+)/, arr); print arr[1]; }' temp_output.txt)
 
