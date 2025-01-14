@@ -32,10 +32,13 @@ class WandbLoggingCallback(BaseCallback):
         if "episode" in env_info.keys():
             ep_reward = env_info["episode"]["r"]
             ep_length = env_info["episode"]["l"]
+            t = env_info["episode"]["t"]
             ep_reward_avg = ep_reward / ep_length
 
             if ep_reward_avg > self.best_reward_avg:
                 self.best_reward_avg = ep_reward_avg
+
+            program = env_info["terminal_observation"]
 
             self.wandb_run.log(
                 {
@@ -43,6 +46,8 @@ class WandbLoggingCallback(BaseCallback):
                     "ep_len": ep_length,
                     "ep_reward_avg": ep_reward / ep_length,
                     "best_reward_avg": self.best_reward_avg,
+                    # "program": program,
+                    "t?": t,
                 },
                 step=self.num_timesteps,
             )
