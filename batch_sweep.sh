@@ -5,4 +5,6 @@ echo "SWEEP_ID: $SWEEP_ID"
 
 # for loop
 for i in {1..5}
+do
     sbatch batch_agent.sh "$SWEEP_ID"
+done
