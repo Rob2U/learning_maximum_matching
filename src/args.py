@@ -41,3 +41,6 @@ class GlobalArgs(Serializable):
     gamma: float = 0.99
     batch_size: int = 64
     learning_rate: float = 3e-4
+
+    # rewards
+    beta: float = 2.0
