@@ -1,4 +1,6 @@
 program: src/train.py
+entity: na_mst_2
+project: constrainedIS
 method: bayes
 metric:
   goal: maximize
