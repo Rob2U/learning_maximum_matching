@@ -91,6 +91,20 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         self.reset_for_every_run = reset_for_every_run
         self.only_reward_on_ret = only_reward_on_ret
         self.action_masking = action_masking
+
+        self.init_args = kwargs
+        self.init_args.update(
+            {
+                "min_n": self.min_n,
+                "max_n": self.max_n,
+                "min_m": self.min_m,
+                "max_m": self.max_m,
+                "reset_for_every_run": self.reset_for_every_run,
+                "only_reward_on_ret": self.only_reward_on_ret,
+                "action_masking": self.action_masking,
+            }
+        )
+
         self.episode_counter: int = 0
         self.current_episode_rewards: List[float] = []
 
@@ -198,7 +212,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         instruction = Transpiler.intToCommand([action])[0]
         truncated = not self.vms[vm_index].append_instruction(instruction)
         result, vm_state = self.vms[vm_index].run()
-        _reward = reward(result, vm_state)
+        _reward = reward(result, vm_state, **self.init_args)
 
         # NOTE(rob2u): might be worth trying to parse the entire return state of the VM + code
         observation: npt.NDArray[int, 1] = np.array(Transpiler.commandToInt(vm_state.code))  # type: ignore

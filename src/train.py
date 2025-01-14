@@ -61,7 +61,7 @@ def execute_program(
 
         # run the code
         result, vm_state = test_environment.vms[0].run()
-        rewards.append(reward(result, vm_state))
+        rewards.append(reward(result, vm_state, **env_args))
 
     test_environment.close()  # type: ignore
 
