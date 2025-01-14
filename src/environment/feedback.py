@@ -24,11 +24,11 @@ def reward(result: Set[Edge], vm_state: VMState, **kwargs: Any) -> float:
         # reward_minimality, # bad values (skew the reward)
         # reward_efficiency,
         # reward_distance_to_MST,
-        reward_correct_edges,
+        # reward_correct_edges,
         # reward_connected,
-        punish_mst_weight_too_large,
-        # punish_code_length,
-        # f_score_mst,
+        # punish_mst_weight_too_large,
+        punish_code_length,
+        f_score_mst,
     ]
 
     # TODO(mehdi): implement a mechanism to weight the rewards given a config. Make sure that all rewards are on the same scale so the weights are valid.
@@ -61,7 +61,9 @@ def f_score_mst(
 
     f_beta = (1 + beta**2) * (precision * recall) / (beta**2 * precision + recall)
 
-    wandb.log({"precision": precision, "recall": recall, "f_beta": f_beta})
+    wandb.log(
+        {"precision": precision, "recall": recall, "f_beta": f_beta}, commit=False
+    )
 
     return f_beta
 
@@ -94,7 +96,8 @@ def punish_mst_weight_too_large(
             "mst_weight": mst_weight,
             "actual_mst_weight": actual_mst_weight,
             "punish_score": punish_score,
-        }
+        },
+        commit=False,
     )
 
     return punish_score
@@ -118,7 +121,7 @@ def reward_correct_edges(
 
     reward = correct_edges / len(mst)
 
-    wandb.log({"correct_edges": correct_edges, "reward": reward})
+    wandb.log({"correct_edges": correct_edges, "reward": reward}, commit=False)
 
     return reward
 
@@ -133,7 +136,7 @@ def punish_code_length(
         else 0.0
     )
 
-    wandb.log({"code_length": code_length, "punish_score": punish_score})
+    wandb.log({"code_length": code_length, "punish_score": punish_score}, commit=False)
     return punish_score
 
 
