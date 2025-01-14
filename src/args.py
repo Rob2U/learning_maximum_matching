@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List
+from typing import Dict
 
 import torch
 from simple_parsing.helpers import Serializable  # type: ignore
@@ -44,3 +44,10 @@ class GlobalArgs(Serializable):
 
     # rewards
     beta: float = 2.0
+
+    reward_fn: Dict[str, float] = field(
+        default_factory=lambda: {
+            "punish_code_length": 1.0,
+            "f_score_mst": 1.0,
+        }
+    )

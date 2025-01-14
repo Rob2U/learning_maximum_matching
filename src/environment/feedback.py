@@ -19,30 +19,16 @@ class RewardFunction(Protocol):
 
 
 def reward(
-    result: Set[Edge], vm_state: VMState, **kwargs: Any
+    result: Set[Edge], vm_state: VMState, reward_fn: Dict[str, float], **kwargs: Any
 ) -> Tuple[float, Dict[str, Any]]:
-    rewards: List[RewardFunction] = [
-        # reward_finite_runtime, # bad values (skew the reward)
-        # reward_valid_spanning_tree_length,
-        # reward_no_cycles, # not implemented
-        # reward_covered_nodes,
-        # reward_minimality, # bad values (skew the reward)
-        # reward_efficiency,
-        # reward_distance_to_MST,
-        # reward_correct_edges,
-        # reward_connected,
-        # punish_mst_weight_too_large,
-        punish_code_length,
-        f_score_mst,
-    ]
-
-    # TODO(mehdi): implement a mechanism to weight the rewards given a config. Make sure that all rewards are on the same scale so the weights are valid.
-
     reward = 0.0
     metric_dict: Dict[str, Any] = {}
-    for reward_fn in rewards:
-        partial_reward, partial_metric_dict = reward_fn(result, vm_state, **kwargs)
-        reward += partial_reward
+
+    for fn, weight in reward_fn.items():
+        assert fn in globals(), f"Reward function {fn} not found in feedback.py"
+
+        partial_reward, partial_metric_dict = eval(fn + "(result, vm_state, **kwargs)")
+        reward += weight * partial_reward
         metric_dict.update(partial_metric_dict)
 
     return reward, metric_dict
