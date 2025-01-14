@@ -1,5 +1,6 @@
 #!/bin/bash
-SWEEP_ID=$(wandb sweep ./configs/sweep.yaml | grep "Created sweep with ID:" | awk '{print $NF}')
+# wandb: Creating sweep with ID: ....
+SWEEP_ID=$(wandb sweep ./configs/sweep.yaml | grep "Creating sweep with ID:" | awk '{print $NF}')
 
 echo "SWEEP_ID: $SWEEP_ID"
 
