@@ -1,8 +1,10 @@
 #!/bin/bash
-# wandb: Creating sweep with ID: ....
-SWEEP_ID=$(echo "$(wandb sweep ./configs/sweep.yaml)" | grep 'Creating sweep with ID:' | awk '{print $NF}')
+# wandb: Run sweep agent with: wandb agent ...
+$(wandb sweep ./configs/sweep.yaml) >temp_output.txt 2>&1
 
-echo "SWEEP_ID: $SWEEP_ID"
+SWEEP_ID=$(awk '/wandb agent/{ match($0, /wandb agent (.+)/, arr); print arr[1]; }' temp_output.txt)
+
+rm temp_output.txt
 
 # for loop
 for i in {1..5}
