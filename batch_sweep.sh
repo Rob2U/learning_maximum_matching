@@ -6,6 +6,8 @@ SWEEP_ID=$(awk '/wandb agent/{ match($0, /wandb agent (.+)/, arr); print arr[1];
 
 rm temp_output.txt
 
+echo "SWEEP_ID: $SWEEP_ID"
+
 # for loop
 for i in {1..5}
 do
