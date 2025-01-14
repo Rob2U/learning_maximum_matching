@@ -1,4 +1,4 @@
-from typing import Any, Protocol, List, Set, runtime_checkable
+from typing import Any, Dict, List, Protocol, Set, Tuple, runtime_checkable
 import wandb
 
 from .algorithms import compute_mst
@@ -11,11 +11,16 @@ from .vm_state import VMState
 
 @runtime_checkable
 class RewardFunction(Protocol):
-    def __call__(self, result: Set[Edge], vm_state: VMState, **kwargs: Any) -> float:
+
+    def __call__(
+        self, result: Set[Edge], vm_state: VMState, **kwargs: Any
+    ) -> Tuple[float, Dict[str, Any]]:
         pass
 
 
-def reward(result: Set[Edge], vm_state: VMState, **kwargs: Any) -> float:
+def reward(
+    result: Set[Edge], vm_state: VMState, **kwargs: Any
+) -> Tuple[float, Dict[str, Any]]:
     rewards: List[RewardFunction] = [
         # reward_finite_runtime, # bad values (skew the reward)
         # reward_valid_spanning_tree_length,
@@ -33,12 +38,19 @@ def reward(result: Set[Edge], vm_state: VMState, **kwargs: Any) -> float:
 
     # TODO(mehdi): implement a mechanism to weight the rewards given a config. Make sure that all rewards are on the same scale so the weights are valid.
 
-    return sum(reward(result, vm_state, **kwargs) for reward in rewards)
+    reward = 0.0
+    metric_dict: Dict[str, Any] = {}
+    for reward_fn in rewards:
+        partial_reward, partial_metric_dict = reward_fn(result, vm_state, **kwargs)
+        reward += partial_reward
+        metric_dict.update(partial_metric_dict)
+
+    return reward, metric_dict
 
 
 def f_score_mst(
     result: Set[Edge], vm_state: VMState, beta: float = 2.0, **kwargs: Any
-) -> float:
+) -> Tuple[float, Dict[str, Any]]:
     mst = compute_mst(vm_state.input)
     true_positives = len(result.intersection(mst))
     false_positives = len(result.difference(mst))
@@ -57,20 +69,16 @@ def f_score_mst(
         precision = 1.0
 
     if precision + recall == 0:
-        return 0.0
+        return 0.0, {"precision": precision, "recall": recall, "f_beta": 0.0}
 
     f_beta = (1 + beta**2) * (precision * recall) / (beta**2 * precision + recall)
 
-    wandb.log(
-        {"precision": precision, "recall": recall, "f_beta": f_beta}, commit=False
-    )
-
-    return f_beta
+    return f_beta, {"precision": precision, "recall": recall, "f_beta": f_beta}
 
 
 def punish_mst_weight_too_large(
     result: Set[Edge], vm_state: VMState, **kwargs: Any
-) -> float:
+) -> Tuple[float, Dict[str, Any]]:
     """Punish the algorithm for returning a spanning tree with a weight that is too large. Range: [-1, 0]
 
     Args:
@@ -91,21 +99,16 @@ def punish_mst_weight_too_large(
         else 0.0
     )
 
-    wandb.log(
-        {
-            "mst_weight": mst_weight,
-            "actual_mst_weight": actual_mst_weight,
-            "punish_score": punish_score,
-        },
-        commit=False,
-    )
-
-    return punish_score
+    return punish_score, {
+        "mst_weight": mst_weight,
+        "actual_mst_weight": actual_mst_weight,
+        "mst_weight_punish_score": punish_score,
+    }
 
 
 def reward_correct_edges(
     result: Set[Edge], vm_state: VMState, **kwargs: dict[str, Any]
-) -> float:
+) -> Tuple[float, Dict[str, Any]]:
     """Reward the algorithm for returning the correct edges in the MST. Range: [0, 1]
 
     Args:
@@ -121,14 +124,12 @@ def reward_correct_edges(
 
     reward = correct_edges / len(mst)
 
-    wandb.log({"correct_edges": correct_edges, "reward": reward}, commit=False)
-
-    return reward
+    return reward, {"correct_edges": correct_edges, "proportion_correct_edges": reward}
 
 
 def punish_code_length(
     result: Set[Edge], vm_state: VMState, punish_cap: int = 24, **kwargs: Any
-) -> float:
+) -> Tuple[float, Dict[str, Any]]:
     code_length = len(vm_state.code)
     punish_score = (
         -(code_length - punish_cap) / (32 - punish_cap)  # HACK HACK HACK
@@ -136,24 +137,30 @@ def punish_code_length(
         else 0.0
     )
 
-    wandb.log({"code_length": code_length, "punish_score": punish_score}, commit=False)
-    return punish_score
+    return punish_score, {
+        "code_length": code_length,
+        "code_length_punish_score": punish_score,
+    }
 
 
-def reward_finite_runtime(result: Set[Edge], vm_state: VMState, **kwargs: Any) -> float:
-    return -100.0 if vm_state.timeout else 0.0
+def reward_finite_runtime(
+    result: Set[Edge], vm_state: VMState, **kwargs: Any
+) -> Tuple[float, Dict[str, Any]]:
+    return -100.0 if vm_state.timeout else 0.0, {}
 
 
 # Checks that the length of the returned spanning tree is n - 1
 def reward_valid_spanning_tree_length(
     result: Set[Edge], vm_state: VMState, **kwargs: Any
-) -> float:
+) -> Tuple[float, Dict[str, Any]]:
     squared_dist = (len(result) - len(vm_state.input.nodes)) ** 2
-    return squared_dist
+    return squared_dist, {}
 
 
 # Checks that the returned edge set is a spanning tree (i.e. connected, no cycles and it spans all nodes)
-def reward_connected(result: Set[Edge], vm_state: VMState, **kwargs: Any) -> float:
+def reward_connected(
+    result: Set[Edge], vm_state: VMState, **kwargs: Any
+) -> Tuple[float, Dict[str, Any]]:
     # TODO(mehdi): Implement this. i.e. number of unconnected graphs, distance between unconnected graphs, sizes of unconnected graphs?
 
     # HACK HACK HACK
@@ -167,47 +174,55 @@ def reward_connected(result: Set[Edge], vm_state: VMState, **kwargs: Any) -> flo
                 connected_nodes.add(edge.u)
                 connected_nodes.add(edge.v)
 
-    return len(connected_nodes) / len(vm_state.input.nodes)
+    return len(connected_nodes) / len(vm_state.input.nodes), {}
 
 
-def reward_no_cycles(result: Set[Edge], vm_state: VMState, **kwargs: Any) -> float:
+def reward_no_cycles(
+    result: Set[Edge], vm_state: VMState, **kwargs: Any
+) -> Tuple[float, Dict[str, Any]]:
     # TODO(mehdi): Check if the graph has cycles?
     # TODO(mehdi): can we do this more finegraned? i.e. number of cycles, distance between cycles, size of cycles?
-    return 0.0
+    return 0.0, {}
 
 
 def reward_covered_nodes(
     result: Set[Edge], vm_state: VMState, factor: float = 100, **kwargs: Any
-) -> float:
+) -> Tuple[float, Dict[str, Any]]:
     count = len(set([edge.u for edge in result] + [edge.v for edge in result]))
-    return (count / len(vm_state.input.nodes)) * factor
+    return (count / len(vm_state.input.nodes)) * factor, {}
 
 
-def reward_minimality(result: Set[Edge], vm_state: VMState, **kwargs: Any) -> float:
+def reward_minimality(
+    result: Set[Edge], vm_state: VMState, **kwargs: Any
+) -> Tuple[float, Dict[str, Any]]:
     max_weight = max(vm_state.input.edges, key=lambda x: x.weight).weight
-    return sum(max_weight - e.weight for e in result)
+    return sum(max_weight - e.weight for e in result), {}
 
 
 def reward_distance_to_MST(
     result: Set[Edge], vm_state: VMState, **kwargs: Any
-) -> float:
+) -> Tuple[float, Dict[str, Any]]:
     mst = compute_mst(vm_state.input)
     # count differences between the two sets
     diff = mst.symmetric_difference(result)
 
-    return -len(diff)
+    return -len(diff), {}
 
 
-def reward_efficiency(result: Set[Edge], vm_state: VMState, **kwargs: Any) -> float:
+def reward_efficiency(
+    result: Set[Edge], vm_state: VMState, **kwargs: Any
+) -> Tuple[float, Dict[str, Any]]:
     # TODO(mehdi): Implement this properly i.e. number of instructions that were actually executed. Probably have to count this in the VM and pass the VM into this.
-    return -len(vm_state.code)
+    return -len(vm_state.code), {}
 
 
-def reward_naive(result: Set[Edge], vm_state: VMState, **kwargs: Any) -> float:
+def reward_naive(
+    result: Set[Edge], vm_state: VMState, **kwargs: Any
+) -> Tuple[float, Dict[str, Any]]:
     """Naive reward function that only checks if the Set contains the minimal edges"""
     if len(result) == 0:
-        return 0.0
+        return 0.0, {}
     minimal_edge = min(result, key=lambda x: x.weight)
     return (1.0 if minimal_edge in result else 0.0) + 0.5 * (
         1 - len(result) / len(vm_state.input.edges)
-    )
+    ), {}

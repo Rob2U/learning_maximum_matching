@@ -1,3 +1,4 @@
+from collections import defaultdict
 import logging
 import random
 from typing import Any, Dict, List, Tuple, Type
@@ -129,8 +130,11 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         """
         observations, rewards, terminals, truncateds = [], [], [], []
 
+        metrics: defaultdict[str, List[Any]] = defaultdict(list)
         for i in range(self.num_vms_per_env):
-            observation, _reward, terminal, truncated, _ = self.step_vm(action, i)
+            observation, _reward, terminal, truncated, vm_metrics = self.step_vm(
+                action, i
+            )
 
             assert (not terminal and action != RET) or (terminal and action == 1), (
                 "Bad terminal value encountered: "
@@ -145,6 +149,8 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
             rewards.append(_reward)
             terminals.append(terminal)
             truncateds.append(truncated)
+            for k, v in vm_metrics.items():
+                metrics[k].append(v)
 
         self.current_episode_rewards.append(sum(rewards) / len(rewards))
 
@@ -185,7 +191,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
             sum(rewards) / len(rewards),
             terminals[0],
             truncateds[0],
-            {},
+            metrics,
         )  # type: ignore
 
     def step_vm(
@@ -212,7 +218,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         instruction = Transpiler.intToCommand([action])[0]
         truncated = not self.vms[vm_index].append_instruction(instruction)
         result, vm_state = self.vms[vm_index].run()
-        _reward = reward(result, vm_state, **self.init_args)
+        _reward, metrics = reward(result, vm_state, **self.init_args)
 
         # NOTE(rob2u): might be worth trying to parse the entire return state of the VM + code
         observation: npt.NDArray[int, 1] = np.array(Transpiler.commandToInt(vm_state.code))  # type: ignore
@@ -225,7 +231,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
             _reward,
             vm_state.finished,
             truncated,
-            {},
+            metrics,
         )
 
     def action_masks(self) -> npt.ArrayLike:
