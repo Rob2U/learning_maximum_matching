@@ -2,7 +2,7 @@
 #SBATCH -A herbrich-student
 #SBATCH --partition magic
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=32GB
+#SBATCH --mem=16GB
 #SBATCH --output=out/out_%j.log
 
 #SBATCH --job-name=na_mst_cpu

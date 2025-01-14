@@ -13,8 +13,4 @@
 source ~/.bashrc # need this to allow activating a conda env
 conda activate na_mst
 
-SWEEP_ID = wandb sweep ./configs/sweep.yaml
-
-# for loop
-for i in {1..5}
-    sbatch batch_agent.sh "$SWEEP_ID"
+wandb agent $1
