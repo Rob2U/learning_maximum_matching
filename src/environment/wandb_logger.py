@@ -9,6 +9,7 @@ class WandbLoggingCallback(BaseCallback):
     def __init__(self, wandb_run: Any):
         super().__init__()
         self.wandb_run = wandb_run
+        self.best_reward_avg = -float("inf")
 
     def _on_step(
         self,
@@ -21,30 +22,27 @@ class WandbLoggingCallback(BaseCallback):
         for info in infos:
             if type(info) is list:
                 for env_info in info:
-                    if "episode" in env_info.keys():
-                        ep_reward = env_info["episode"]["r"]
-                        ep_length = env_info["episode"]["l"]
-
-                        self.wandb_run.log(
-                            {
-                                "ep_reward": ep_reward,
-                                "ep_len": ep_length,
-                                "ep_reward_avg": ep_reward / ep_length,
-                            },
-                            step=self.num_timesteps,
-                        )
+                    self._on_episode(env_info)
             else:
-                if "episode" in info.keys():
-                    ep_reward = info["episode"]["r"]
-                    ep_length = info["episode"]["l"]
-
-                    self.wandb_run.log(
-                        {
-                            "ep_reward": ep_reward,
-                            "ep_len": ep_length,
-                            "ep_reward_avg": ep_reward / ep_length,
-                        },
-                        step=self.num_timesteps,
-                    )
+                self._on_episode(info)
 
         return True
+
+    def _on_episode(self, env_info: dict[str, Any]) -> None:
+        if "episode" in env_info.keys():
+            ep_reward = env_info["episode"]["r"]
+            ep_length = env_info["episode"]["l"]
+            ep_reward_avg = ep_reward / ep_length
+
+            if ep_reward_avg > self.best_reward_avg:
+                self.best_reward_avg = ep_reward_avg
+
+            self.wandb_run.log(
+                {
+                    "ep_reward": ep_reward,
+                    "ep_len": ep_length,
+                    "ep_reward_avg": ep_reward / ep_length,
+                    "best_reward_avg": self.best_reward_avg,
+                },
+                step=self.num_timesteps,
+            )
