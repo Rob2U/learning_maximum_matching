@@ -9,7 +9,6 @@ parameters:
     min: -11.5 # math.log(1e-5)
     max: -6.9 # math.log(1e-3)
   gamma:
-    values:
-      distribution: log_uniform
-      min: -0.1 # math.log(0.9)
-      max: -0.001 # math.log(0.999)
+    distribution: log_uniform
+    min: -0.1 # math.log(0.9)
+    max: -0.001 # math.log(0.999)
