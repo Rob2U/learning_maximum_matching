@@ -1,4 +1,5 @@
 from typing import Any, Dict, List, Protocol, Set, Tuple, runtime_checkable
+
 import wandb
 
 from .algorithms import compute_mst

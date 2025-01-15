@@ -11,4 +11,4 @@
 
 source ~/.bashrc # need this to allow activating a conda env
 conda activate na_mst
-python src/train.py --config=configs/rew_on_ret.yaml
+python src/train.py --config_path=configs/rew_on_ret.yaml

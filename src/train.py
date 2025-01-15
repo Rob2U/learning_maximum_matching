@@ -1,8 +1,10 @@
 import logging
 import random
 import sys
+from collections import defaultdict
+from dataclasses import asdict
 from datetime import datetime
-from typing import Any, Dict, List, Type
+from typing import Any, Dict, List, Tuple, Type
 
 import gymnasium as gym
 import numpy as np
@@ -10,7 +12,7 @@ import torch
 from gymnasium import Env
 from sb3_contrib import MaskablePPO
 from sb3_contrib.common.maskable.utils import get_action_masks, is_masking_supported
-from simple_parsing import ArgumentParser
+from simple_parsing import parse
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv
 
@@ -52,20 +54,25 @@ logger = logging.getLogger(__name__)
 
 def execute_program(
     env_args: Dict[Any, Any], program: List[Type[AbstractCommand]], n: int = 1000
-) -> List[float]:
+) -> Tuple[List[float], defaultdict[str, List[Any]]]:
     rewards: List[float] = []
+    metrics: defaultdict[str, List[Any]] = defaultdict(list)
+
     env_args["num_vms_per_env"] = 1
     test_environment = MSTCodeEnvironment(**env_args)  # type: ignore
-    for _ in range(n):
+    for _ in range(n):  # TODO(rob2u): could we simply switch to multiple vms directly?
         test_environment.reset(code=program)
 
         # run the code
         result, vm_state = test_environment.vms[0].run()
-        rewards.append(reward(result, vm_state, **env_args))
+        observed_reward, observed_metric = reward(result, vm_state, **env_args)
+        rewards.append(observed_reward)
+        for key, value in observed_metric.items():
+            metrics[key].append(value)
 
     test_environment.close()  # type: ignore
 
-    return rewards
+    return rewards, metrics
 
 
 def infer_program(env_args: Dict[str, Any], model: Any) -> List[Type[AbstractCommand]]:
@@ -90,22 +97,17 @@ def seed_all(seed: int = 42) -> None:
 
 
 if __name__ == "__main__":
-    # load configuration
-
-    parser = ArgumentParser()
-    parser.add_argument("--config", type=str, default="configs/config.yaml")
-    call_args = parser.parse_args()
-    config_path = call_args.config
-
-    global_args = GlobalArgs.load_yaml(config_path).to_dict()
-    logging.info(global_args)
-    seed_all(global_args["seed"])
+    #  Load Config: We can specify config via: --config_path="path/to/config.yml"
+    config_path = "./configs/config.yaml"
+    global_args = asdict(
+        parse(GlobalArgs, config_path=config_path)
+    )  # if config_path is set, default values are loaded from there and overwritten by the command line arguments
 
     # Setup WandB:
     wandb_run = wandb.init(
         entity="na_mst_2",
         project="constrainedIS",
-        config=dict(global_args),  # type: ignore
+        config=global_args,  # type: ignore
     )
 
     gym.register("MSTCode-v0", entry_point=MSTCodeEnvironment)  # type: ignore
@@ -163,20 +165,29 @@ if __name__ == "__main__":
 
     # check what the model has learned
     learned_program = infer_program(env_args=global_args, model=model)
-    learned_program_results = execute_program(global_args, learned_program)
+    learned_program_results, learned_program_metrics = execute_program(
+        global_args, learned_program
+    )
 
     logging.info("Learned program: ")
     logging.info([str(c()) for c in learned_program])
     logging.info(
         f"Average reward: {sum(learned_program_results) / len(learned_program_results)}"
     )
-    wandb.log(
+
+    averages = {
+        key + "_avg": sum(values) / len(values)
+        for key, values in learned_program_metrics.items()
+    }
+    log_metrics = {"learned_program/" + key: value for key, value in averages.items()}
+    log_metrics.update(
         {
-            "result_code": " ".join([str(c()) for c in learned_program]),
-            "result_reward_avg": sum(learned_program_results)
+            "learned_program/code": " ".join([str(c()) for c in learned_program]),
+            "learned_program/reward_avg": sum(learned_program_results)
             / len(learned_program_results),
         }
     )
+    wandb.log(log_metrics)
 
     # Best program during training:
     # get best program of all envs in vec_env
@@ -187,7 +198,7 @@ if __name__ == "__main__":
     else:
         best_program = train_env.unwrapped.best_program  # type: ignore
 
-    best_program_results = execute_program(
+    best_program_results, best_program_metrics = execute_program(
         env_args=global_args, program=best_program[1]
     )
 
@@ -196,12 +207,23 @@ if __name__ == "__main__":
     logging.info(
         f"Average reward: {sum(best_program_results) / len(best_program_results)}"
     )
-    wandb.log(
+
+    averages = {
+        key + "_avg": sum(values) / len(values)
+        for key, values in best_program_metrics.items()
+    }
+    log_metrics = {"best_program/" + key: value for key, value in averages.items()}
+    log_metrics.update(
         {
-            "best_code": ("[ " + ", ".join([str(c()) for c in best_program[1]]) + " ]"),
-            "best_reward_avg": sum(best_program_results) / len(best_program_results),
+            "best_program/code": (
+                "[ " + ", ".join([str(c()) for c in best_program[1]]) + " ]"
+            ),
+            "best_program/reward_avg": sum(best_program_results)
+            / len(best_program_results),
         }
     )
+
+    wandb.log(log_metrics)
 
     # the actual mst implementation
     # our_program = [
@@ -247,10 +269,27 @@ if __name__ == "__main__":
         RET,
     ]
 
-    our_program_results = execute_program(global_args, our_program)
+    our_program_results, our_program_metrics = execute_program(global_args, our_program)
+
+    # TODO: average and log metrics
 
     logging.info("Our program:")
     logging.info([str(c()) for c in our_program])  # type: ignore
     logging.info(
         f"Average reward: {sum(our_program_results) / len(our_program_results)}"
     )
+
+    averages = {
+        key + "_avg": sum(values) / len(values)
+        for key, values in our_program_metrics.items()
+    }
+    log_metrics = {"our_program/" + key: value for key, value in averages.items()}
+    log_metrics.update(
+        {
+            "our_program/code": " ".join([str(c()) for c in our_program]), # type: ignore
+            "our_program/reward_avg": sum(our_program_results)
+            / len(our_program_results),
+        }
+    )
+
+    wandb.log(log_metrics)
