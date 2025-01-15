@@ -1,6 +1,6 @@
-from collections import defaultdict
 import logging
 import random
+from collections import defaultdict
 from typing import Any, Dict, List, Tuple, Type
 
 import gymnasium as gym

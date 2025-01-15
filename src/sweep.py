@@ -1,6 +1,7 @@
-import subprocess
-import wandb
 import math
+import subprocess
+
+import wandb
 
 # Usage:
 # - adjust hyperparameters to sweep over in sweep_config
@@ -45,7 +46,7 @@ def sweep() -> None:
     sweep_id = wandb.sweep(
         sweep_config,
         entity="na_mst_2",
-        project="constrainedIS",    
+        project="constrainedIS",
     )
 
     print("Sweep ID: ", sweep_id)
