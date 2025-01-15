@@ -2,6 +2,7 @@ import logging
 import random
 import sys
 from datetime import datetime
+from dataclasses import asdict
 from typing import Any, Dict, List, Type
 
 import gymnasium as gym
@@ -10,7 +11,7 @@ import torch
 from gymnasium import Env
 from sb3_contrib import MaskablePPO
 from sb3_contrib.common.maskable.utils import get_action_masks, is_masking_supported
-from simple_parsing import ArgumentParser
+from simple_parsing import parse
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv
 
@@ -90,22 +91,15 @@ def seed_all(seed: int = 42) -> None:
 
 
 if __name__ == "__main__":
-    # load configuration
-
-    parser = ArgumentParser()
-    parser.add_argument("--config", type=str, default="configs/config.yaml")
-    call_args = parser.parse_args()
-    config_path = call_args.config
-
-    global_args = GlobalArgs.load_yaml(config_path).to_dict()
-    logging.info(global_args)
-    seed_all(global_args["seed"])
-
+    #  Load Config: We can specify config via: --config_path="path/to/config.yml"
+    config_path = "./configs/config.yaml"
+    global_args = asdict(parse(GlobalArgs, config_path=config_path)) # if config_path is set, default values are loaded from there and overwritten by the command line arguments
+    
     # Setup WandB:
     wandb_run = wandb.init(
         entity="na_mst_2",
         project="constrainedIS",
-        config=dict(global_args),  # type: ignore
+        config=global_args,  # type: ignore
     )
 
     gym.register("MSTCode-v0", entry_point=MSTCodeEnvironment)  # type: ignore
