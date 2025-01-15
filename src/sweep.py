@@ -11,9 +11,10 @@ import wandb
 sweep_config = {
     "program": "src/train.py",
     "entity": "na_mst_2",
+    "name": "lower_beta",
     "project": "constrainedIS",
     "method": "bayes",
-    "metric": {"goal": "maximize", "name": "best_avg_reward"},
+    "metric": {"goal": "maximize", "name": "best_reward_avg"},
     "parameters": {
         "learning_rate": {
             "distribution": "log_uniform",
@@ -57,3 +58,4 @@ def sweep() -> None:
 
 if __name__ == "__main__":
     sweep()
+

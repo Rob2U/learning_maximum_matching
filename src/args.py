@@ -43,7 +43,7 @@ class GlobalArgs(Serializable):
     learning_rate: float = 3e-4
 
     # rewards
-    beta: float = 2.0
+    beta: float = 0.25 # beta < 1 to encourage precision over recall
 
     reward_fn: Dict[str, float] = field(
         default_factory=lambda: {
