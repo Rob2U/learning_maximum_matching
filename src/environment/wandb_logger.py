@@ -9,7 +9,9 @@ class WandbLoggingCallback(BaseCallback):
     def __init__(self, wandb_run: Any):
         super().__init__()
         self.wandb_run = wandb_run
-        self.best_reward_avg = -float("inf")  #
+        self.best_reward_avg = -float("inf")
+        self.best_end_reward = -float("inf")
+        self.episode_counter = 0
         self.episode_entropies: List[float] = []
 
     def _on_step(
@@ -38,6 +40,7 @@ class WandbLoggingCallback(BaseCallback):
         """
         if "episode" in env_info.keys():
             self._on_episode_end(env_info)
+            self.episode_counter += 1
 
     def _on_episode_end(self, env_info: dict[str, Any]) -> None:
         """This method will be called after every episode."""
@@ -57,6 +60,12 @@ class WandbLoggingCallback(BaseCallback):
             if key not in ["episode", "terminal_observation", "TimeLimit.truncated"]
         }
 
+        # NOTE(rob2u): 'step_reward_avg' is the reward for this step and the ep is over -> end_reward
+        end_reward = averages["step_reward_avg"]
+        del averages["step_reward_avg"]
+        if end_reward > self.best_end_reward:
+            self.best_end_reward = end_reward
+
         avg_entropy = sum(self.episode_entropies) / len(self.episode_entropies)
 
         self.wandb_run.log(
@@ -65,9 +74,12 @@ class WandbLoggingCallback(BaseCallback):
                 "ep_len": ep_length,
                 "ep_reward_avg": ep_reward / ep_length,
                 "best_reward_avg": self.best_reward_avg,
+                "best_end_reward": self.best_end_reward,
+                "end_reward": end_reward,
                 # "program": program,
                 "t?": t,
                 "avg_entropy": avg_entropy,
+                "episode": self.episode_counter,
                 **averages,
             },
             step=self.num_timesteps,
