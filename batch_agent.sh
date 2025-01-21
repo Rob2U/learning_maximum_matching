@@ -13,4 +13,4 @@
 source ~/.bashrc # need this to allow activating a conda env
 conda activate na_mst
 
-wandb agent $1
+wandb agent $1 –count 2
