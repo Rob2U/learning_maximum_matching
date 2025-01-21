@@ -1,6 +1,6 @@
 # GENERAL
 iterations: 250000
-max_code_length: 32
+max_code_length: 64
 reset_for_every_run: False
 num_vms_per_env: 100
 action_masking: True
@@ -8,19 +8,20 @@ vectorize_environment: False
 
 # REWARDs
 only_reward_on_ret: True
-punish_cap: 24
+punish_cap: 48
 
 # ENVIRONMENT -- GRAPH Generation
-min_n: 3
-min_m: 3
-max_n: 3
-max_m: 3
+min_n: 4
+min_m: 6
+max_n: 4
+max_m: 6
+
 
 # MODEL
 gamma: 0.99
-layer_dim_pi: 128
-layer_dim_vf: 128
-feature_dim: 128
+layer_dim_pi: 256
+layer_dim_vf: 256
+feature_dim: 256
 
 fe_d_model: 128
 fe_nhead: 4

@@ -41,9 +41,13 @@ class GlobalArgs(Serializable):
     gamma: float = 0.99
     batch_size: int = 64
     learning_rate: float = 3e-4
+    n_steps: int = 2048
+    ent_coef: float = 0.01
+    clip_range: float = 0.2
+
 
     # rewards
-    beta: float = 0.25 # beta < 1 to encourage precision over recall
+    beta: float = 0.25  # beta < 1 to encourage precision over recall
 
     reward_fn: Dict[str, float] = field(
         default_factory=lambda: {
