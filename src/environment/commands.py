@@ -159,8 +159,12 @@ class RESET_EDGE_REGISTER(AbstractCommand):
         state.edge_register = None
 
     def is_applicable(self, state: VMState) -> bool:
+        # TODO(philipp): first part only correct if we have no loops!
         # TODO(philipp): the only way where it would be valid is if the last command was wrapped in a conditional but then the last action was invalid...
-        return is_last_command_different_to(state.code, RESET_EDGE_REGISTER)
+        return does_command_exist(
+            state.code,
+            WRITE_EDGE_REGISTER,
+        ) and is_last_command_different_to(state.code, RESET_EDGE_REGISTER)
 
     def is_comparison(self) -> bool:
         return False

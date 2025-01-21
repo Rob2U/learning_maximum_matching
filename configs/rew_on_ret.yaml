@@ -25,3 +25,18 @@ feature_dim: 128
 fe_d_model: 128
 fe_nhead: 4
 fe_num_blocks: 4
+
+reward_fn:
+  punish_code_length: 1.0
+  f_score_mst: 1.0
+
+  reward_finite_runtime: 0.0 # bad values (skew the reward)
+  reward_valid_spanning_tree_length: 0.0
+  reward_no_cycles: 0.0 # not implemented
+  reward_covered_nodes: 0.0
+  reward_minimality: 0.0 # bad values (skew the reward)
+  reward_efficiency: 0.0
+  reward_distance_to_MST: 0.0
+  reward_correct_edges: 0.0
+  reward_connected: 0.0
+  punish_mst_weight_too_large: 0.0

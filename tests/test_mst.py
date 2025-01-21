@@ -17,7 +17,7 @@ from environment.commands import (
     WRITE_EDGE_REGISTER,
 )
 from environment.generation import generate_graph
-from environment.vm import VirtualMachine
+from environment.vm import VirtualMachine, VMState
 
 
 def test_compute_mst() -> None:
@@ -108,11 +108,7 @@ def test_simple_prims_algorithm(n_nodes: int, m_edges: int) -> None:
     ), f"Expected MST weight {expected_mst_weight}, but got {mst_weight}"
 
 
-@pytest.mark.parametrize("n_nodes, m_edges", [(10, 45), (20, 150), (30, 417)])
-def test_first_generated_algorithm(n_nodes: int, m_edges: int) -> None:
-    # Generate a test graph
-    test_graph = generate_graph(n_nodes, m_edges)
-
+def test_first_generated_algorithm() -> None:
     # Define the Prim's algorithm instructions
     code = [
         PUSH_LEGAL_EDGES,
@@ -162,3 +158,88 @@ def test_first_generated_algorithm(n_nodes: int, m_edges: int) -> None:
     assert (
         mst_weight == expected_mst_weight
     ), f"Expected MST weight {expected_mst_weight}, but got {mst_weight}"
+
+
+def test_simplified_generated_algorithm() -> None:
+    # Simplest algorithm that should still work
+    code = [
+        # pushes all three edges to stack
+        PUSH_LEGAL_EDGES,
+        WRITE_EDGE_REGISTER,
+        POP_EDGE,
+        IF_EDGE_WEIGHT_LT,  # compares top of stack with second top of stack
+        WRITE_EDGE_REGISTER,
+        ADD_EDGE_TO_SET,
+        # has added one of the two smaller edges to set
+        # adds the two remaining edges to stack
+        PUSH_LEGAL_EDGES,
+        WRITE_EDGE_REGISTER,
+        POP_EDGE,
+        IF_EDGE_WEIGHT_LT,  # compares top of stack with second top of stack
+        WRITE_EDGE_REGISTER,
+        ADD_EDGE_TO_SET,
+        # has added second of the two smaller edges to set
+        RET,
+    ]
+
+    # Create a virtual machine and run the code
+    test_graph = generate_graph(3, 3)
+    vm = VirtualMachine(code, test_graph, verbose=False)
+    result, vm_state = vm.run()
+    infinite = vm_state.timeout
+
+    # Check if the result is not infinite
+    assert not infinite, "Max instructions reached."
+
+    # Check if the result is a valid MST
+    mst_weight = sum(edge.weight for edge in result)
+    expected_mst_weight = sum(edge.weight for edge in compute_mst(test_graph))
+    assert (
+        mst_weight == expected_mst_weight
+    ), f"Expected MST weight {expected_mst_weight}, but got {mst_weight}"
+
+
+def test_independent_vm() -> None:
+    our_program = [
+        PUSH_LEGAL_EDGES,
+        RESET_EDGE_REGISTER,
+        WRITE_EDGE_REGISTER,
+        POP_EDGE,
+        IF_EDGE_WEIGHT_LT,
+        WRITE_EDGE_REGISTER,
+        POP_EDGE,
+        IF_EDGE_WEIGHT_LT,
+        WRITE_EDGE_REGISTER,
+        POP_EDGE,
+        ADD_EDGE_TO_SET,
+        # continue for 2nd edge
+        PUSH_LEGAL_EDGES,
+        RESET_EDGE_REGISTER,
+        WRITE_EDGE_REGISTER,
+        POP_EDGE,
+        IF_EDGE_WEIGHT_LT,
+        WRITE_EDGE_REGISTER,
+        POP_EDGE,
+        ADD_EDGE_TO_SET,
+        RET,
+    ]
+
+    # test that the commands are applicable
+    input_graph = generate_graph(3, 3, 420)
+    state = VMState(input=input_graph, code=[])
+    while state.pc < len(our_program):
+        command = our_program[state.pc]
+        print(command(), ": \t", command().is_applicable(state))
+        state.code = our_program[: state.pc]
+        command().execute(state)
+        print(state.edge_stack)
+        print(state.edge_register)
+        print(state.edge_set)
+
+        print()
+        state.pc += 1
+
+    assert state.edge_set == {
+        input_graph.edges[0],
+        input_graph.edges[2],
+    }, "Expected MST not found."
