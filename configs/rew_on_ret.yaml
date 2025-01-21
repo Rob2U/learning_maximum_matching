@@ -1,35 +1,36 @@
 # GENERAL
 iterations: 250000
-max_code_length: 64
+max_code_length: 32
 reset_for_every_run: False
 num_vms_per_env: 100
 action_masking: True
 vectorize_environment: False
+device: cpu
 
 # REWARDs
 only_reward_on_ret: True
-punish_cap: 48
+punish_cap: 24
 
 # ENVIRONMENT -- GRAPH Generation
-min_n: 4
-min_m: 6
-max_n: 4
-max_m: 6
+min_n: 3
+min_m: 3
+max_n: 3
+max_m: 3
 
 
 # MODEL
 gamma: 0.99
-layer_dim_pi: 256
-layer_dim_vf: 256
-feature_dim: 256
+layer_dim_pi: 128
+layer_dim_vf: 128
+feature_dim: 128
 
 fe_d_model: 128
 fe_nhead: 4
 fe_num_blocks: 4
 
 reward_fn:
-  punish_code_length: 1.0
-  f_score_mst: 1.0
+  punish_code_length: 0.0
+  f_score_mst: 0.0
 
   reward_finite_runtime: 0.0 # bad values (skew the reward)
   reward_valid_spanning_tree_length: 0.0
@@ -38,6 +39,7 @@ reward_fn:
   reward_minimality: 0.0 # bad values (skew the reward)
   reward_efficiency: 0.0
   reward_distance_to_MST: 0.0
-  reward_correct_edges: 0.0
   reward_connected: 0.0
-  punish_mst_weight_too_large: 0.0
+
+  reward_correct_edges: 1.0
+  punish_mst_weight_too_large: 1.0

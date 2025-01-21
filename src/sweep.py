@@ -11,7 +11,7 @@ import wandb
 sweep_config = {
     "program": "src/train.py",
     "entity": "robert-weeke2-uni-potsdam-org",
-    "name": "rew_on_ret_n=4_m=6",
+    "name": "rew_on_ret_n",
     "project": "constrainedIS",
     "method": "bayes",
     "metric": {"goal": "maximize", "name": "best_reward_avg"},
