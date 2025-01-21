@@ -6,7 +6,7 @@
 #SBATCH --output=out/out_%j.log
 
 #SBATCH --job-name=na_mst_cpu
-#SBATCH --time=12:00:00
+#SBATCH --time=30:00:00
 
 # I think the best way is to copy this file per experiment...
 
