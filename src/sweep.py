@@ -10,9 +10,7 @@ import wandb
 
 sweep_config = {
     "program": "src/train.py",
-    "entity": "robert-weeke2-uni-potsdam-org",
-    "name": "rew_on_ret_n",
-    "project": "constrainedIS",
+    "name": "always_reward",
     "method": "bayes",
     "metric": {"goal": "maximize", "name": "best_reward_avg"},
     "parameters": {
@@ -59,7 +57,7 @@ def start_agent(sweep_id: str) -> None:
 def sweep() -> None:
     sweep_id = wandb.sweep(
         sweep_config,
-        entity="na_mst_2",
+        entity="robert-weeke2-uni-potsdam",
         project="constrainedIS",
     )
 
