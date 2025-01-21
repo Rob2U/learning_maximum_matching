@@ -187,8 +187,6 @@ class CustomActorCriticPolicy(MaskableActorCriticPolicy):
         self.mlp_extractor = MLPNetwork(
             net_arch=[self.layer_dim_pi] * 5,
             feature_dim=self.feature_dim,
-            layer_dim_pi=self.layer_dim_pi,
-            layer_dim_vf=self.layer_dim_vf,
             activation_fn=nn.ReLU,
             share_features_extractor=self.share_features_extractor,
         ) # type: ignore

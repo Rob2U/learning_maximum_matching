@@ -1,6 +1,6 @@
 # GENERAL
 iterations: 250000
-max_code_length: 64
+max_code_length: 32
 reset_for_every_run: False
 num_vms_per_env: 100
 action_masking: True
@@ -13,13 +13,13 @@ add_vm_state_to_observations: False
 
 # REWARDs
 only_reward_on_ret: False
-punish_cap: 48
+punish_cap: 24
 
 # ENVIRONMENT -- GRAPH Generation
-min_n: 4
-min_m: 6
-max_n: 4
-max_m: 6
+min_n: 3
+min_m: 3
+max_n: 3
+max_m: 3
 
 
 # MODEL
