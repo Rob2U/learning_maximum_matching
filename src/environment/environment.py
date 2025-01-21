@@ -237,8 +237,8 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
     def action_masks(self) -> npt.ArrayLike:
         mask = np.zeros(len(COMMAND_REGISTRY), dtype=int)
         if self.action_masking:
-            for i, Command in enumerate(COMMAND_REGISTRY):
-                mask[i] = Command().is_applicable(self.vms[0].vm_state)
+            for Command in COMMAND_REGISTRY:
+                mask[Transpiler.commandToInt([Command])[0]] = Command().is_applicable(self.vms[0].vm_state)
         else:
             mask = mask + 1
             mask[Transpiler.commandToInt([RET])[0]] = (
