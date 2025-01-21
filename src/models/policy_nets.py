@@ -1,4 +1,4 @@
-from typing import Any, Callable, Tuple, Optional, List
+from typing import Any, Callable, Tuple, Optional, List, Type
 
 import torch
 import torch as th
@@ -95,6 +95,59 @@ class DoubleLayerNetwork(nn.Module):
         return self.value_net(features)  # type: ignore
 
 
+class MLPNetwork(nn.Module):
+    def __init__(
+        self,
+        net_arch: List[int],
+        feature_dim: int = 256,
+        activation_fn: Type[nn.Module] = nn.ReLU,
+        share_features_extractor: bool = True,
+    ) -> None:
+        super().__init__()
+
+        # IMPORTANT:
+        self.latent_dim_pi = net_arch[-1]
+        self.latent_dim_vf = net_arch[-1]
+
+        # Build the network
+        self.policy_net = self.build_network(net_arch, feature_dim, activation_fn)
+        if share_features_extractor:
+            self.value_net = self.policy_net
+        else:
+            self.value_net = self.build_network(net_arch, feature_dim, activation_fn)
+
+        self.share_features_extractor = share_features_extractor
+
+    def build_network(
+        self, net_arch: List[int], feature_dim: int, activation_fn: Type[nn.Module]
+    ) -> nn.Sequential:
+        input_layer_size = feature_dim
+        layers = [nn.Linear(input_layer_size, net_arch[0]), activation_fn()]
+        prev_layer_size = net_arch[0]
+        for layer_size in net_arch[1:]:
+            layers += [nn.Linear(prev_layer_size, layer_size), activation_fn()]
+            prev_layer_size = layer_size
+
+        return nn.Sequential(*layers)
+
+    def forward(self, features: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Forward pass in all the networks.
+
+        Args:
+            features (torch.Tensor): The input features (output of the features extractor)
+        Returns:
+            Tuple[torch.Tensor, torch.Tensor]: The output of the actor and critic networks
+        """
+
+        return self.forward_actor(features), self.forward_critic(features)
+
+    def forward_actor(self, features: torch.Tensor) -> torch.Tensor:
+        return self.policy_net(features)  # type: ignore
+
+    def forward_critic(self, features: torch.Tensor) -> torch.Tensor:
+        return self.value_net(features)  # type: ignore
+
+
 class TransformerNetwork(nn.Module):
     """We could also use a Transformer network instead of a MLP network."""
 
@@ -131,11 +184,14 @@ class CustomActorCriticPolicy(MaskableActorCriticPolicy):
         )
 
     def _build_mlp_extractor(self) -> None:
-        self.mlp_extractor = DoubleLayerNetwork(
+        self.mlp_extractor = MLPNetwork(
+            net_arch=[self.layer_dim_pi] * 5,
             feature_dim=self.feature_dim,
             layer_dim_pi=self.layer_dim_pi,
             layer_dim_vf=self.layer_dim_vf,
-        )  # type: ignore
+            activation_fn=nn.ReLU,
+            share_features_extractor=self.share_features_extractor,
+        ) # type: ignore
 
     def forward(
         self,

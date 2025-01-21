@@ -110,7 +110,7 @@ if __name__ == "__main__":
 
     # Setup WandB:
     wandb_run = wandb.init(
-        entity="na_mst_2",
+        entity="robert-weeke2-uni-potsdam-org",
         project="constrainedIS",
         config=global_args,  # type: ignore
     )
@@ -301,7 +301,7 @@ if __name__ == "__main__":
     log_metrics = {"our_program/" + key: value for key, value in averages.items()}
     log_metrics.update(
         {
-            "our_program/code": " ".join([str(c()) for c in our_program]), # type: ignore
+            "our_program/code": " ".join([str(c()) for c in our_program]),  # type: ignore
             "our_program/reward_avg": sum(our_program_results)
             / len(our_program_results),
         }

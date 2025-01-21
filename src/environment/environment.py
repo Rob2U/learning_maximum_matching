@@ -101,6 +101,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         self.init_args = kwargs
         self.init_args.update(
             {
+                "max_code_length": self.max_code_length,
                 "min_n": self.min_n,
                 "max_n": self.max_n,
                 "min_m": self.min_m,

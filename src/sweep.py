@@ -10,11 +10,15 @@ import wandb
 
 sweep_config = {
     "program": "src/train.py",
-    "entity": "na_mst_2",
+    "entity": "robert-weeke2-uni-potsdam-org",
+    "name": "rew_on_ret_n=4_m=6",
     "project": "constrainedIS",
     "method": "bayes",
-    "metric": {"goal": "maximize", "name": "best_avg_reward"},
+    "metric": {"goal": "maximize", "name": "best_reward_avg"},
     "parameters": {
+        "config_path": {
+            "values": ["configs/config.yaml"],
+        },
         "learning_rate": {
             "distribution": "log_uniform",
             "min": math.log(1e-5),
@@ -24,6 +28,16 @@ sweep_config = {
             "distribution": "log_uniform",
             "min": math.log(0.9),
             "max": math.log(0.999),
+        },
+        "ent_coef": {
+            "distribution": "log_uniform",
+            "min": math.log(1e-3),
+            "max": math.log(0.2),
+        },
+        "clip_range": {
+            "distribution": "uniform",
+            "min": 0.05,
+            "max": 0.5,
         },
     },
 }
@@ -51,8 +65,8 @@ def sweep() -> None:
 
     print("Sweep ID: ", sweep_id)
 
-    for i in range(NUM_AGENTS):
-        start_agent(sweep_id)
+    # for i in range(NUM_AGENTS):
+    #     start_agent(sweep_id)
 
 
 if __name__ == "__main__":

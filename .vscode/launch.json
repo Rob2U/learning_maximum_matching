@@ -6,7 +6,9 @@
       "request": "launch",
       "name": "Launch Train Script",
       "program": "${workspaceFolder}/src/train.py",
-      "purpose": ["debug-test"]
+      "purpose": [
+        "debug-test"
+      ]
     }
   ]
 }

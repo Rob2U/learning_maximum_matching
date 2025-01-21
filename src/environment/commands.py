@@ -625,3 +625,41 @@ CONDITIONAL_COMMANDS: List[Type[AbstractCommand]] = [
     IF_IS_NOT_FIRST_EDGE,
     IF_HEAP_EMPTY,
 ]
+
+if __name__ == "__main__":
+    from .generation import generate_graph
+    our_program = [
+        PUSH_LEGAL_EDGES,
+        RESET_EDGE_REGISTER,
+        WRITE_EDGE_REGISTER,
+        POP_EDGE,
+        IF_EDGE_WEIGHT_LT,
+        WRITE_EDGE_REGISTER,
+        POP_EDGE,
+        IF_EDGE_WEIGHT_LT,
+        WRITE_EDGE_REGISTER,
+        POP_EDGE,
+        ADD_EDGE_TO_SET,
+        # continue for 2nd edge
+        PUSH_LEGAL_EDGES,
+        RESET_EDGE_REGISTER,
+        WRITE_EDGE_REGISTER,
+        POP_EDGE,
+        IF_EDGE_WEIGHT_LT,
+        WRITE_EDGE_REGISTER,
+        POP_EDGE,
+        ADD_EDGE_TO_SET,
+        RET,
+    ]
+    # test that the commands are applicable
+    input_graph = generate_graph(3, 3, 42)
+    state = VMState(input=input_graph)
+    for command in our_program:
+        print(command(), ": \t", command().is_applicable(state))
+        command().execute(state)
+        print(state.edge_stack)
+        print(state.edge_register)
+        print(state.edge_set)
+        
+        print()
+    print(state.edge_set)

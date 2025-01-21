@@ -118,11 +118,15 @@ def reward_correct_edges(
 
 
 def punish_code_length(
-    result: Set[Edge], vm_state: VMState, punish_cap: int = 24, **kwargs: Any
+    result: Set[Edge],
+    vm_state: VMState,
+    punish_cap: int = 24,
+    max_code_length: int = 32,
+    **kwargs: Any,
 ) -> Tuple[float, Dict[str, Any]]:
     code_length = len(vm_state.code)
     punish_score = (
-        -(code_length - punish_cap) / (32 - punish_cap)  # HACK HACK HACK
+        -(code_length - punish_cap) / (max_code_length - punish_cap)  # HACK HACK HACK
         if code_length > punish_cap
         else 0.0
     )
