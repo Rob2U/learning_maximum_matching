@@ -17,6 +17,9 @@ class GlobalArgs(Serializable):
     num_envs: int = 16  # NOTE(rob2u): automatically set to 1 if not vectorized
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
 
+    # STATE
+    add_vm_state_to_observations: bool = False
+
     # ENVIRONMENT -- GRAPH Generation
     num_vms_per_env: int = 100
     min_n: int = 3

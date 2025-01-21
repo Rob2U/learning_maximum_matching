@@ -45,6 +45,7 @@ from .vm_state import AbstractCommand
 
 
 class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
+
     def __init__(
         self,
         max_code_length: int = 32,
@@ -56,6 +57,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         max_m: int = 3,
         only_reward_on_ret: bool = True,
         action_masking: bool = True,
+        add_vm_state_to_observations: bool = False,
         **kwargs: Any,
     ) -> None:
         """Initializes the environment
@@ -92,6 +94,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         self.reset_for_every_run = reset_for_every_run
         self.only_reward_on_ret = only_reward_on_ret
         self.action_masking = action_masking
+        self.add_vm_state_to_observations = add_vm_state_to_observations
 
         self.init_args = kwargs
         self.init_args.update(
@@ -221,13 +224,27 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         _reward, metrics = reward(result, vm_state, **self.init_args)
 
         # NOTE(rob2u): might be worth trying to parse the entire return state of the VM + code
-        observation: npt.NDArray[int, 1] = np.array(Transpiler.commandToInt(vm_state.code))  # type: ignore
-        observation = np.concatenate(
-            [observation, (self.max_code_length - observation.shape[0]) * [0]]
+        vm_observation = np.array(
+            [
+                0 if vm_state.edge_register == None else 1,
+                len(vm_state.edge_set),
+                len(vm_state.edge_stack),
+            ]
         )
-        assert observation.shape[0] == self.max_code_length, "Bad observation shape!"
+        code_observation: npt.NDArray[int, 1] = np.array(Transpiler.commandToInt(vm_state.code))  # type: ignore
+        filler_observation = (self.max_code_length - code_observation.shape[0]) * [0]
+        code_observation = np.concatenate(
+            [
+                vm_observation if self.add_vm_state_to_observations else [],
+                code_observation,
+                filler_observation,
+            ]
+        )
+        assert (
+            code_observation.shape[0] == self.max_code_length
+        ), "Bad observation shape!"
         return (
-            observation,
+            code_observation,
             _reward,
             vm_state.finished,
             truncated,

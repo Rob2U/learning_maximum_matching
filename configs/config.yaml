@@ -6,6 +6,10 @@ num_vms_per_env: 100
 action_masking: True
 vectorize_environment: False
 
+# STATE
+# currently only adds the state of the first VM to the observation. Therefore, it makes sense to set num_vms_per_env to 1 if add_vm_state_to_observations is set to True
+add_vm_state_to_observations: False
+
 # REWARDs
 only_reward_on_ret: False
 punish_cap: 24
