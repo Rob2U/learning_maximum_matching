@@ -48,6 +48,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
 
     def __init__(
         self,
+        observation_size: int = 32,
         max_code_length: int = 32,
         reset_for_every_run: bool = False,
         num_vms_per_env: int = 100,
@@ -84,9 +85,10 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
             len(COMMAND_REGISTRY)
         )  # action_space contains all the possible instructions for the next line
         self.observation_space = gym.spaces.MultiDiscrete(
-            [len(COMMAND_REGISTRY)] * self.max_code_length
-        )
+            [len(COMMAND_REGISTRY)] * observation_size
+        )  # we need to cap the size of the edge_set and edge_stack to the size of the COMMAND_REGISTRY so that each state dimension has the same size. otherwise we would need to do annoying things in the transformer.
 
+        self.observation_size = observation_size
         self.min_n = min_n
         self.max_n = max_n
         self.min_m = min_m
@@ -126,7 +128,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
             action (int): An as int encoded AbstractCommand provided by the agent
 
         Returns:
-            observation: The new state of the environment (the code), encoded as np.array of ints (with length self.max_code_length)
+            observation: The new state of the environment (the code), encoded as np.array of ints (with length self.max_code_length), prepended with additional information about the VM state if add_vm_state_to_observations is True
             reward: The reward for the action
             terminal: Whether the episode is done (True if the action is RET)
             info: Additional information about the environment (in our case an empty dictionary)
@@ -227,8 +229,12 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         vm_observation = np.array(
             [
                 0 if vm_state.edge_register == None else 1,
-                len(vm_state.edge_set),
-                len(vm_state.edge_stack),
+                min(
+                    len(vm_state.edge_set), len(COMMAND_REGISTRY) - 1
+                ),  # because our state space is capped by the size of the COMMAND_REGISTRY, we need to cap the edge_set size as well
+                min(
+                    len(vm_state.edge_stack), len(COMMAND_REGISTRY) - 1
+                ),  # because our state space is capped by the size of the COMMAND_REGISTRY, we need to cap the edge_stack size as well
             ]
         )
         code_observation: npt.NDArray[int, 1] = np.array(Transpiler.commandToInt(vm_state.code))  # type: ignore
@@ -240,9 +246,11 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
                 filler_observation,
             ]
         )
+
         assert (
-            code_observation.shape[0] == self.max_code_length
+            code_observation.shape[0] == self.observation_size
         ), "Bad observation shape!"
+
         return (
             code_observation,
             _reward,
@@ -305,11 +313,24 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
             )
 
         # NOTE(rob2u): might be worth trying to parse the entire state of the VM (as above)
-        return (
-            np.array([0] * self.max_code_length)
-            if not code
-            else np.array(code + [0] * (self.max_code_length - len(code)))
-        ), {}
+        if code:
+            vm_observation = np.zeros(3)
+            code_filler = [0] * (self.max_code_length - len(code))
+            observation = np.concatenate(
+                [
+                    vm_observation if self.add_vm_state_to_observations else [],
+                    code,
+                    code_filler,
+                ]
+            )
+        else:
+            observation = np.array([0] * self.observation_size)
+
+        assert (
+            observation.shape[0] == self.observation_size
+        ), "Bad observation shape on reset!"
+
+        return observation, {}
 
     def close(self) -> None:
         pass

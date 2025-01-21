@@ -103,6 +103,11 @@ if __name__ == "__main__":
         parse(GlobalArgs, config_path=config_path)
     )  # if config_path is set, default values are loaded from there and overwritten by the command line arguments
 
+    observation_size = global_args["max_code_length"]
+    if global_args["add_vm_state_to_observations"]:
+        observation_size += 3  # add 3 more dimensions for the VM state
+    global_args["observation_size"] = observation_size
+
     # Setup WandB:
     wandb_run = wandb.init(
         entity="na_mst_2",
@@ -131,7 +136,7 @@ if __name__ == "__main__":
     nhead = global_args["fe_nhead"]
     num_blocks = global_args["fe_num_blocks"]
     num_instructions = len(COMMAND_REGISTRY)
-    program_length = global_args["max_code_length"]
+
     layer_dim_pi = global_args["layer_dim_pi"]
     layer_dim_vf = global_args["layer_dim_vf"]
 
@@ -143,7 +148,7 @@ if __name__ == "__main__":
             nhead=nhead,
             num_blocks=num_blocks,
             num_instructions=num_instructions,
-            program_length=program_length,
+            observation_size=observation_size,
             device=global_args["device"],
         ),
         # MLP layers for actor and critic after the transformer:

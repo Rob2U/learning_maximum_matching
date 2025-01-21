@@ -33,6 +33,7 @@ class PositionalEncoding(nn.Module):
 
 
 class TransformerFeaturesExtractor(BaseFeaturesExtractor):
+
     def __init__(
         self,
         observation_space: gym.spaces.Space[gym.spaces.MultiDiscrete],
@@ -41,7 +42,7 @@ class TransformerFeaturesExtractor(BaseFeaturesExtractor):
         nhead: int = 4,
         num_blocks: int = 4,
         num_instructions: int = 12,
-        program_length: int = 32,
+        observation_size: int = 32,
         device: str = "cpu",
     ):
         """Transformer-based features extractor for the MSTCode environment.
@@ -53,14 +54,14 @@ class TransformerFeaturesExtractor(BaseFeaturesExtractor):
             nhead (int, optional): The number of heads in the multiheadattention models. Defaults to 4.
             num_blocks (int, optional): The number of blocks in the encoder. Defaults to 4.
             num_instructions (int, optional): The number of instructions in the environment. Defaults to 12.
-            program_length (int, optional): The maximum length of the program. Defaults to 32.
+            observation_size (int, optional): The maximum length of the program. Defaults to 32.
         """
         super().__init__(observation_space, features_dim)
         self.num_instructions = num_instructions
-        self.program_length = program_length
+        self.observation_size = observation_size
 
         self.positional_encoding = PositionalEncoding(
-            d_model=d_model, dropout=0.0, max_len=program_length + 1
+            d_model=d_model, dropout=0.0, max_len=observation_size + 1
         )
         self.embedding = nn.Linear(
             num_instructions, d_model, device=device
@@ -80,33 +81,33 @@ class TransformerFeaturesExtractor(BaseFeaturesExtractor):
         )  # (d_model) -> (features_dim): Linear layer to output the features
 
     def forward(self, observations: torch.Tensor) -> torch.Tensor:
-        # observations shape: (batch_size, program_length * num_instructions) -> one hot encoded and concatenated
-        x = observations.float().view(-1, self.program_length, self.num_instructions)
+        # observations shape: (batch_size, observation_size * num_instructions) -> one hot encoded and concatenated
+        x = observations.float().view(-1, self.observation_size, self.num_instructions)
         x = self.embedding(
             x
-        )  # (batch_size, program_length, num_instructions) -> (batch_size, program_length, d_model)
+        )  # (batch_size, observation_size, num_instructions) -> (batch_size, observation_size, d_model)
 
         x = torch.cat(
             (self.class_token.repeat(x.size(0), 1, 1), x), dim=1
-        )  # (batch_size, program_length, d_model) -> (batch_size, program_length + 1, d_model)
+        )  # (batch_size, observation_size, d_model) -> (batch_size, observation_size + 1, d_model)
 
         # Positional encoding should be added here
         x = x.transpose(
             0, 1
-        )  # (batch_size, program_length + 1, d_model) -> (program_length + 1, batch_size, d_model)
+        )  # (batch_size, observation_size + 1, d_model) -> (observation_size + 1, batch_size, d_model)
         x = self.positional_encoding(
             x
-        )  # (program_length + 1, batch_size, d_model) -> (program_length + 1, batch_size, d_model)
+        )  # (observation_size + 1, batch_size, d_model) -> (observation_size + 1, batch_size, d_model)
         x = x.transpose(
             0, 1
-        )  # (program_length + 1, batch_size, d_model) -> (batch_size, program_length + 1, d_model)
+        )  # (observation_size + 1, batch_size, d_model) -> (batch_size, observation_size + 1, d_model)
 
         x = self.transformer_encoder(
             x
-        )  # (batch_size, program_length + 1, d_model) -> (batch_size, program_length + 1, d_model)
+        )  # (batch_size, observation_size + 1, d_model) -> (batch_size, observation_size + 1, d_model)
         x = x[
             :, 0
-        ]  # select the class token (batch_size, program_length + 1, d_model) -> (batch_size, d_model)
+        ]  # select the class token (batch_size, observation_size + 1, d_model) -> (batch_size, d_model)
         x = self.fc_out(x)
         return x
 
@@ -120,7 +121,7 @@ if __name__ == "__main__":
     nhead = 4
     num_blocks = 4
     num_instructions = 12
-    program_length = 32
+    observation_size = 32
 
     policy_kwargs = dict(
         features_extractor_class=TransformerFeaturesExtractor,
@@ -130,7 +131,7 @@ if __name__ == "__main__":
             nhead=nhead,
             num_blocks=num_blocks,
             num_instructions=num_instructions,
-            program_length=program_length,
+            observation_size=observation_size,
         ),
         net_arch=[
             feature_dim,
