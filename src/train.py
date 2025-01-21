@@ -105,7 +105,7 @@ if __name__ == "__main__":
 
     # Setup WandB:
     wandb_run = wandb.init(
-        entity="na_mst_2",
+        entity="robert-weeke2-uni-potsdam-org",
         project="constrainedIS",
         config=global_args,  # type: ignore
     )
