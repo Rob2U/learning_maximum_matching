@@ -10,7 +10,7 @@ import wandb
 
 sweep_config = {
     "program": "src/train.py",
-    "entity": "na_mst_2",
+    "entity": "robert-weeke2-uni-potsdam-org",
     "name": "rew_on_ret_n=4_m=6",
     "project": "constrainedIS",
     "method": "bayes",
