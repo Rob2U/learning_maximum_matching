@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, List
 
 from stable_baselines3.common.callbacks import BaseCallback
 
@@ -9,17 +9,19 @@ class WandbLoggingCallback(BaseCallback):
     def __init__(self, wandb_run: Any):
         super().__init__()
         self.wandb_run = wandb_run
-        self.best_reward_avg = -float("inf")
+        self.best_reward_avg = -float("inf")  #
+        self.episode_entropies: List[float] = []
 
     def _on_step(
         self,
     ) -> bool:  # NOTE(rob2u): necessary because abstract method in BaseCallback
-        """This method will be called after every model step."""
+        """This method will be called after every environment step."""
         infos = (
             self.locals["infos"]
             if isinstance(self.locals["infos"], list)
             else [self.locals["infos"]]
         )
+        self.episode_entropies.append(self.model.policy.entropy)
         for info in infos:
             if type(info) is list:
                 for env_info in info:
@@ -55,6 +57,8 @@ class WandbLoggingCallback(BaseCallback):
             if key not in ["episode", "terminal_observation", "TimeLimit.truncated"]
         }
 
+        avg_entropy = sum(self.episode_entropies) / len(self.episode_entropies)
+
         self.wandb_run.log(
             {
                 "ep_reward": ep_reward,
@@ -63,6 +67,7 @@ class WandbLoggingCallback(BaseCallback):
                 "best_reward_avg": self.best_reward_avg,
                 # "program": program,
                 "t?": t,
+                "avg_entropy": avg_entropy,
                 **averages,
             },
             step=self.num_timesteps,

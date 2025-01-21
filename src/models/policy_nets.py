@@ -1,10 +1,12 @@
-from typing import Any, Callable, Tuple
+from typing import Any, Callable, Tuple, Optional, List
 
 import torch
+import torch as th
 from gymnasium import spaces
 from sb3_contrib.common.maskable.policies import MaskableActorCriticPolicy
 from stable_baselines3 import PPO
 from torch import nn
+import numpy as np
 
 
 class SingleLayerNetwork(nn.Module):
@@ -100,6 +102,8 @@ class TransformerNetwork(nn.Module):
 
 
 class CustomActorCriticPolicy(MaskableActorCriticPolicy):
+    entropy: float
+
     def __init__(
         self,
         observation_space: spaces.Space[spaces.MultiDiscrete],
@@ -132,3 +136,42 @@ class CustomActorCriticPolicy(MaskableActorCriticPolicy):
             layer_dim_pi=self.layer_dim_pi,
             layer_dim_vf=self.layer_dim_vf,
         )  # type: ignore
+
+    def forward(
+        self,
+        obs: th.Tensor,
+        deterministic: bool = False,
+        action_masks: Optional[np.ndarray] = None,  # type: ignore
+    ) -> Tuple[th.Tensor, th.Tensor, th.Tensor]:
+        """
+        Forward pass in all the networks (actor and critic)
+
+        :param obs: Observation
+        :param deterministic: Whether to sample or use deterministic actions
+        :param action_masks: Action masks to apply to the action distribution
+        :return: action, value and log probability of the action
+        """
+        # COPIED FROM MaskableActorCriticPolicy.forward() and adjusted to log entropies
+
+        # Preprocess the observation if needed
+        features = self.extract_features(obs)
+        if self.share_features_extractor:
+            latent_pi, latent_vf = self.mlp_extractor(features)
+        else:
+            pi_features, vf_features = features
+            latent_pi = self.mlp_extractor.forward_actor(pi_features)
+            latent_vf = self.mlp_extractor.forward_critic(vf_features)
+        # Evaluate the values for the given observations
+        values = self.value_net(latent_vf)
+        distribution = self._get_action_dist_from_latent(latent_pi)
+        if action_masks is not None:
+            distribution.apply_masking(action_masks)
+
+        actions = distribution.get_actions(deterministic=deterministic)
+        log_prob = distribution.log_prob(actions)
+
+        entropy = distribution.entropy()
+        if entropy is not None:
+            self.entropy = entropy.item()
+
+        return actions, values, log_prob
