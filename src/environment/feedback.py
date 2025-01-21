@@ -32,6 +32,9 @@ def reward(
         reward += weight * partial_reward
         metric_dict.update(partial_metric_dict)
 
+    # Also Add the reward:
+    metric_dict["step_reward"] = reward
+    
     return reward, metric_dict
 
 
