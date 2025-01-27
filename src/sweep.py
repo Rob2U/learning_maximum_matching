@@ -12,7 +12,7 @@ sweep_config = {
     "program": "src/train.py",
     "name": "always_reward",
     "method": "bayes",
-    "metric": {"goal": "maximize", "name": "best_reward_avg"},
+    "metric": {"goal": "maximize", "name": "best_end_reward"},
     "parameters": {
         "config_path": {
             "values": ["configs/config.yaml"],
