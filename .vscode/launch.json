@@ -6,6 +6,10 @@
       "request": "launch",
       "name": "Launch Train Script",
       "program": "${workspaceFolder}/src/train.py",
+      "args": [
+        "--config_path",
+        "configs/rew_on_ret_mult_punish.yaml"
+      ],
       "purpose": [
         "debug-test"
       ]

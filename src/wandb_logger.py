@@ -1,6 +1,7 @@
 from typing import Any, List
 
 from stable_baselines3.common.callbacks import BaseCallback
+from models.policy_nets import CustomActorCriticPolicy
 
 
 class WandbLoggingCallback(BaseCallback):
@@ -23,7 +24,9 @@ class WandbLoggingCallback(BaseCallback):
             if isinstance(self.locals["infos"], list)
             else [self.locals["infos"]]
         )
-        self.episode_entropies.append(self.model.policy.entropy)
+        if isinstance(self.model.policy, CustomActorCriticPolicy):
+            self.episode_entropies.append(self.model.policy.entropy)
+        
         for info in infos:
             if type(info) is list:
                 for env_info in info:
@@ -66,7 +69,7 @@ class WandbLoggingCallback(BaseCallback):
         if end_reward > self.best_end_reward:
             self.best_end_reward = end_reward
 
-        avg_entropy = sum(self.episode_entropies) / len(self.episode_entropies)
+        avg_entropy = sum(self.episode_entropies) / len(self.episode_entropies) if self.episode_entropies else 0
 
         self.wandb_run.log(
             {

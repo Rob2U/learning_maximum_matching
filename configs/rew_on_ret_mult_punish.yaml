@@ -1,0 +1,49 @@
+# GENERAL
+iterations: 250000
+max_code_length: 32
+reset_for_every_run: False
+num_vms_per_env: 100
+action_masking: True
+vectorize_environment: False
+device: cuda
+
+# REWARDs
+only_reward_on_ret: True
+punish_cap: 24
+
+# ENVIRONMENT -- GRAPH Generation
+min_n: 3
+min_m: 3
+max_n: 3
+max_m: 3
+
+
+# MODEL
+gamma: 0.99
+layer_dim_pi: 512
+layer_dim_vf: 512
+feature_dim: 512
+
+fe_d_model: 512
+fe_nhead: 4
+fe_num_blocks: 4
+
+reward_fn:
+  punish_code_length: 0.0
+  f_score_mst: 0.0
+
+  reward_finite_runtime: 0.0 # bad values (skew the reward)
+  reward_valid_spanning_tree_length: 0.0
+  reward_no_cycles: 0.0 # not implemented
+  reward_covered_nodes: 0.0
+  reward_minimality: 0.0 # bad values (skew the reward)
+  reward_efficiency: 0.0
+  reward_distance_to_MST: 0.0
+  reward_connected: 0.0
+
+  reward_correct_edges: 1.0
+  punish_mst_weight_too_large: 1.0
+
+factor_fn:
+  punish_too_many_add_edge_instructions: 0.25
+  reward_if_write_edge_register_combination: 0.25

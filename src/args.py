@@ -47,7 +47,7 @@ class GlobalArgs(Serializable):
     n_steps: int = 2048
     ent_coef: float = 0.01
     clip_range: float = 0.2
-
+    no_feature_extractor: bool = False
 
     # rewards
     beta: float = 0.25  # beta < 1 to encourage precision over recall
@@ -57,4 +57,8 @@ class GlobalArgs(Serializable):
             "punish_code_length": 1.0,
             "f_score_mst": 1.0,
         }
+    )
+    
+    factor_fn: Dict[str, float] = field(
+        default_factory=lambda: {}
     )

@@ -5,7 +5,8 @@ import wandb
 from .algorithms import compute_mst
 from .structure_elements import Edge
 from .vm_state import VMState
-
+from .commands import ADD_EDGE_TO_SET, IF_EDGE_WEIGHT_LT, WRITE_EDGE_REGISTER, RET
+from .generation import generate_graph
 # def reward_multiple_graphs():  # TODO
 # pass
 
@@ -20,7 +21,7 @@ class RewardFunction(Protocol):
 
 
 def reward(
-    result: Set[Edge], vm_state: VMState, reward_fn: Dict[str, float], **kwargs: Any
+    result: Set[Edge], vm_state: VMState, reward_fn: Dict[str, float], factor_fn: Dict[str, float], **kwargs: Any
 ) -> Tuple[float, Dict[str, Any]]:
     reward = 0.0
     metric_dict: Dict[str, Any] = {}
@@ -31,11 +32,37 @@ def reward(
         partial_reward, partial_metric_dict = eval(fn + "(result, vm_state, **kwargs)")
         reward += weight * partial_reward
         metric_dict.update(partial_metric_dict)
+        
+    # Calculate the reward factor
+    factor, reward_factor_metric_dict = reward_factor(result, vm_state, factor_fn, **kwargs)
+    metric_dict.update(reward_factor_metric_dict)
 
     # Also Add the reward:
-    metric_dict["step_reward"] = reward
+    metric_dict["step_reward"] = reward * factor
     
-    return reward, metric_dict
+    return reward * factor, metric_dict
+
+
+def reward_factor(
+    result: Set[Edge], vm_state: VMState, factor_fn: Dict[str, float], **kwargs: Any
+) -> Tuple[float, Dict[str, Any]]:
+    """Calculate a factor to increase / decrease the reward base on the factor_fn's. 
+    NOTE(rob2u): I did not want to provide duplicate versions of the punishments. Therefore I assume that every factor_fn is negative.
+    This is the reason for `mult_factor *= 1 + (factor * partial_factor)`."""
+    mult_factor = 1.0
+    metric_dict: Dict[str, Any] = {}
+
+    for fn, factor in factor_fn.items():
+        assert fn in globals(), f"Reward function {fn} not found in feedback.py"
+
+        partial_factor, partial_metric_dict = eval(fn + "(result, vm_state, **kwargs)")
+        mult_factor *= 1 + (factor * partial_factor) # 1 + partial_factor to use the factors designed for adding for multiplying
+        metric_dict.update(partial_metric_dict)
+
+    # Also Add the reward:
+    metric_dict["reward_factor"] =mult_factor 
+    
+    return mult_factor, metric_dict
 
 
 def f_score_mst(
@@ -116,6 +143,56 @@ def reward_correct_edges(
 
     return reward, {"correct_edges": correct_edges, "proportion_correct_edges": reward}
 
+
+def punish_too_many_add_edge_instructions(
+    result: Set[Edge], vm_state: VMState, **kwargs: Any
+) -> Tuple[float, Dict[str, Any]]:
+    # extract the amount of add_to_set instructions
+    add_to_set_instructions = len([
+        instruction for instruction in vm_state.code if instruction == ADD_EDGE_TO_SET
+    ])
+    
+    necessary_instructions = len(vm_state.input.nodes) - 1 
+    punish_score = (
+        -abs(add_to_set_instructions - necessary_instructions) / necessary_instructions
+        if add_to_set_instructions > necessary_instructions
+        else 0.0
+    )
+    
+    return punish_score, {
+        "add_edge_instructions": add_to_set_instructions,
+        "add_edge_instructions_necessary": necessary_instructions,
+        "add_to_set_instructions_punish_score": punish_score,
+    }
+    
+    
+# def reward_write_edge_register(
+#     result: Set[Edge], vm_state: VMState, **kwargs: Any
+# ):
+#     """Reward the algorithm for using the WRITE_EDGE instruction. Range: [0, 1]"""
+#     write_edge_instructions = len([
+#         instruction for instruction in vm_state.code if instruction == WRITE_EDGE_REGISTER
+#     ])
+#     reward = write_edge_instructions / 5 if len(vm_state.code) > 0 else 0.0 # HACK HACK HACK
+#     reward = min(1.0, reward)
+    
+#     return reward, {"write_edge_instructions": write_edge_instructions}
+
+
+def reward_if_write_edge_register_combination(
+    result: Set[Edge], vm_state: VMState, **kwargs: Any
+):
+    """Reward the algorithm for writing IF statements together with WRITE_EDGE instructions. Range: [0, 1]"""
+    # if instructions
+    if_instructions_idxs = [idx for idx, instruction in enumerate(vm_state.code) if instruction == IF_EDGE_WEIGHT_LT]
+    # write_edge instructions after if instructions
+    write_edge_instructions_idxs = [idx for idx, instruction in enumerate(vm_state.code) if instruction == WRITE_EDGE_REGISTER]
+    # check if the write_edge instructions are after the if instructions
+    write_edge_after_ifs = [write_edge_idx for write_edge_idx in write_edge_instructions_idxs if ((write_edge_idx - 1) in if_instructions_idxs)] 
+    reward = len(write_edge_after_ifs) / len(if_instructions_idxs) if len(if_instructions_idxs) > 0 else 0.0
+    assert reward <= 1.0, f"Reward {reward} is greater than 1.0"
+    
+    return reward, {"write_edge_after_ifs": len(write_edge_after_ifs), "if_instruction": len(if_instructions_idxs), "write_edge_instructions": len(write_edge_instructions_idxs), "proportion_write_edges_after_ifs": reward}            
 
 def punish_code_length(
     result: Set[Edge],
@@ -220,3 +297,14 @@ def reward_naive(
     return (1.0 if minimal_edge in result else 0.0) + 0.5 * (
         1 - len(result) / len(vm_state.input.edges)
     ), {}
+
+
+if __name__ == "__main__":
+    code = [IF_EDGE_WEIGHT_LT, WRITE_EDGE_REGISTER, ADD_EDGE_TO_SET, ADD_EDGE_TO_SET, RET, WRITE_EDGE_REGISTER]
+    vm_state = VMState(input=generate_graph(3, 3), code=code)
+    
+    reward, metrics = punish_too_many_add_edge_instructions([], vm_state)
+    print(reward, metrics)
+    
+    reward, metrics = reward_if_write_edge_register_combination([], vm_state)
+    print(reward, metrics)
