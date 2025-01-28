@@ -35,7 +35,7 @@ from environment.commands import (
 from environment.environment import COMMAND_REGISTRY, MSTCodeEnvironment, Transpiler
 from environment.feedback import reward
 from environment.vm_state import AbstractCommand
-from environment.wandb_logger import WandbLoggingCallback
+from wandb_logger import WandbLoggingCallback
 from models.policy_nets import CustomActorCriticPolicy
 from models.transformer_fe import TransformerFeaturesExtractor
 
@@ -151,21 +151,39 @@ if __name__ == "__main__":
         layer_dim_pi=layer_dim_pi,
         layer_dim_vf=layer_dim_vf,
     )
+    
+    if global_args["no_feature_extractor"]:
+        policy_kwargs = dict(
+            net_arch=[layer_dim_pi] * 5,
+        )
+        
+        model = MaskablePPO(
+            "MlpPolicy",
+            train_env,
+            verbose=1,
+            device=global_args["device"],
+            policy_kwargs=policy_kwargs,
+            gamma=global_args["gamma"],
+            seed=global_args["seed"],
+            batch_size=global_args["batch_size"],
+            learning_rate=global_args["learning_rate"],
+        )
+            
+    else: 
+        model = MaskablePPO(
+            CustomActorCriticPolicy,
+            train_env,
+            verbose=1,
+            device=global_args["device"],
+            policy_kwargs=policy_kwargs,
+            gamma=global_args["gamma"],
+            seed=global_args["seed"],
+            batch_size=global_args["batch_size"],
+            learning_rate=global_args["learning_rate"],
+        )  # type: ignore
 
-    model = MaskablePPO(
-        CustomActorCriticPolicy,
-        train_env,
-        verbose=1,
-        device=global_args["device"],
-        policy_kwargs=policy_kwargs,
-        gamma=global_args["gamma"],
-        seed=global_args["seed"],
-        batch_size=global_args["batch_size"],
-        learning_rate=global_args["learning_rate"],
-    )  # type: ignore
-
-    logging.info("Policy network overview:")
-    logging.info(model.policy)
+        logging.info("Policy network overview:")
+        logging.info(model.policy)
 
     model.learn(
         total_timesteps=global_args["iterations"],
