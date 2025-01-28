@@ -75,6 +75,12 @@ def execute_program(
     return rewards, metrics
 
 
+def get_code_from_state(env_args: Dict[str, Any], state: List[int]) -> List[Type[AbstractCommand]]:
+    code_size = env_args["max_code_length"]
+    code = state[-code_size:]
+    return Transpiler.intToCommand([int(a) for a in code])  # type: ignore
+
+
 def infer_program(env_args: Dict[str, Any], model: Any) -> List[Type[AbstractCommand]]:
     new_env: Env[Any, Any] = gym.make("MSTCode-v0", **env_args)
     state, _ = new_env.reset()
@@ -87,7 +93,7 @@ def infer_program(env_args: Dict[str, Any], model: Any) -> List[Type[AbstractCom
         # logging.info(Transpiler.intToCommand([action])[0]())  # type: ignore
 
     new_env.close()  # type: ignore
-    return Transpiler.intToCommand([int(a) for a in state])  # type: ignore
+    return get_code_from_state(env_args, state)  # type: ignore
 
 
 def seed_all(seed: int = 42) -> None:
