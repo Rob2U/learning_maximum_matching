@@ -58,7 +58,5 @@ class GlobalArgs(Serializable):
             "f_score_mst": 1.0,
         }
     )
-    
-    factor_fn: Dict[str, float] = field(
-        default_factory=lambda: {}
-    )
+
+    factor_fn: Dict[str, float] = field(default_factory=lambda: {})

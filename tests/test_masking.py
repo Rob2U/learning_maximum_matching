@@ -1,15 +1,15 @@
 import pytest
 
 from environment.commands import (
-    PUSH_LEGAL_EDGES,
-    POP_EDGE,
-    IF_EDGE_WEIGHT_LT,
-    WRITE_EDGE_REGISTER,
     ADD_EDGE_TO_SET,
+    IF_EDGE_WEIGHT_LT,
+    POP_EDGE,
+    PUSH_LEGAL_EDGES,
     RET,
+    WRITE_EDGE_REGISTER,
 )
-from environment.vm_state import VMState
 from environment.generation import generate_graph
+from environment.vm_state import VMState
 
 
 def test_simplest_algo_has_valid_masks() -> None:

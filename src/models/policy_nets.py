@@ -1,12 +1,12 @@
-from typing import Any, Callable, Tuple, Optional, List, Type
+from typing import Any, Callable, List, Optional, Tuple, Type
 
+import numpy as np
 import torch
 import torch as th
 from gymnasium import spaces
 from sb3_contrib.common.maskable.policies import MaskableActorCriticPolicy
 from stable_baselines3 import PPO
 from torch import nn
-import numpy as np
 
 
 class SingleLayerNetwork(nn.Module):
@@ -189,7 +189,7 @@ class CustomActorCriticPolicy(MaskableActorCriticPolicy):
             feature_dim=self.feature_dim,
             activation_fn=nn.ReLU,
             share_features_extractor=self.share_features_extractor,
-        ) # type: ignore
+        )  # type: ignore
 
     def forward(
         self,

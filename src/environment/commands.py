@@ -628,6 +628,7 @@ CONDITIONAL_COMMANDS: List[Type[AbstractCommand]] = [
 
 if __name__ == "__main__":
     from .generation import generate_graph
+
     our_program = [
         PUSH_LEGAL_EDGES,
         RESET_EDGE_REGISTER,
@@ -660,6 +661,6 @@ if __name__ == "__main__":
         print(state.edge_stack)
         print(state.edge_register)
         print(state.edge_set)
-        
+
         print()
     print(state.edge_set)

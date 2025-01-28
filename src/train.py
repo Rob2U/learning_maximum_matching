@@ -35,9 +35,9 @@ from environment.commands import (
 from environment.environment import COMMAND_REGISTRY, MSTCodeEnvironment, Transpiler
 from environment.feedback import reward
 from environment.vm_state import AbstractCommand
-from wandb_logger import WandbLoggingCallback
 from models.policy_nets import CustomActorCriticPolicy
 from models.transformer_fe import TransformerFeaturesExtractor
+from wandb_logger import WandbLoggingCallback
 
 # from wandb.integration.sb3 import WandbCallback
 # from simple_parsing import ArgumentParser
@@ -75,7 +75,9 @@ def execute_program(
     return rewards, metrics
 
 
-def get_code_from_state(env_args: Dict[str, Any], state: List[int]) -> List[Type[AbstractCommand]]:
+def get_code_from_state(
+    env_args: Dict[str, Any], state: List[int]
+) -> List[Type[AbstractCommand]]:
     code_size = env_args["max_code_length"]
     code = state[-code_size:]
     return Transpiler.intToCommand([int(a) for a in code])  # type: ignore
@@ -162,12 +164,12 @@ if __name__ == "__main__":
         layer_dim_pi=layer_dim_pi,
         layer_dim_vf=layer_dim_vf,
     )
-    
+
     if global_args["no_feature_extractor"]:
         policy_kwargs = dict(
             net_arch=[layer_dim_pi] * 5,
         )
-        
+
         model = MaskablePPO(
             "MlpPolicy",
             train_env,
@@ -179,8 +181,8 @@ if __name__ == "__main__":
             batch_size=global_args["batch_size"],
             learning_rate=global_args["learning_rate"],
         )
-            
-    else: 
+
+    else:
         model = MaskablePPO(
             CustomActorCriticPolicy,
             train_env,
