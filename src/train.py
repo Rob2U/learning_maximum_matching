@@ -200,7 +200,7 @@ if __name__ == "__main__":
 
     model.learn(
         total_timesteps=global_args["iterations"],
-        callback=WandbLoggingCallback(wandb_run),
+        callback=WandbLoggingCallback(wandb_run, global_args),
     )  # type: ignore
     model.save("ppo_mst_code")
 

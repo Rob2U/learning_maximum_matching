@@ -1,17 +1,21 @@
-from typing import Any, List
+from typing import Any, Dict, List, Type
 
 from stable_baselines3.common.callbacks import BaseCallback
-from models.policy_nets import CustomActorCriticPolicy
 
+from models.policy_nets import CustomActorCriticPolicy
+from environment.environment import Transpiler
+from environment.vm_state import AbstractCommand
 
 class WandbLoggingCallback(BaseCallback):
     """See https://stable-baselines3.readthedocs.io/en/master/guide/callbacks.html#custom-callback"""
 
-    def __init__(self, wandb_run: Any):
+    def __init__(self, wandb_run: Any, global_args: dict[str, Any]) -> None:
         super().__init__()
         self.wandb_run = wandb_run
+        self.global_args = global_args
         self.best_reward_avg = -float("inf")
         self.best_end_reward = -float("inf")
+        self.best_code = []
         self.episode_counter = 0
         self.episode_entropies: List[float] = []
 
@@ -26,7 +30,7 @@ class WandbLoggingCallback(BaseCallback):
         )
         if isinstance(self.model.policy, CustomActorCriticPolicy):
             self.episode_entropies.append(self.model.policy.entropy)
-        
+
         for info in infos:
             if type(info) is list:
                 for env_info in info:
@@ -55,7 +59,7 @@ class WandbLoggingCallback(BaseCallback):
         if ep_reward_avg > self.best_reward_avg:
             self.best_reward_avg = ep_reward_avg
 
-        example_program = env_info["terminal_observation"]
+        example_program = self.get_code_from_state(env_info["terminal_observation"])
 
         averages = {
             key + "_avg": sum(values) / len(values)
@@ -68,8 +72,13 @@ class WandbLoggingCallback(BaseCallback):
         del averages["step_reward_avg"]
         if end_reward > self.best_end_reward:
             self.best_end_reward = end_reward
+            self.best_code = "[" + ", ".join([str(c()) for c in example_program]) + "]"
 
-        avg_entropy = sum(self.episode_entropies) / len(self.episode_entropies) if self.episode_entropies else 0
+        avg_entropy = (
+            sum(self.episode_entropies) / len(self.episode_entropies)
+            if self.episode_entropies
+            else 0
+        )
 
         self.wandb_run.log(
             {
@@ -78,6 +87,7 @@ class WandbLoggingCallback(BaseCallback):
                 "ep_reward_avg": ep_reward / ep_length,
                 "best_reward_avg": self.best_reward_avg,
                 "best_end_reward": self.best_end_reward,
+                "best_code": self.best_code,
                 "end_reward": end_reward,
                 # "program": program,
                 "t?": t,
@@ -87,3 +97,12 @@ class WandbLoggingCallback(BaseCallback):
             },
             step=self.num_timesteps,
         )
+        
+    def get_code_from_state(
+        self,
+        state: List[int]
+    ) -> List[Type[AbstractCommand]]:
+        code_size = self.global_args["max_code_length"]
+        code = state[-code_size:]
+        return Transpiler.intToCommand([int(a) for a in code])  # type: ignore
+
