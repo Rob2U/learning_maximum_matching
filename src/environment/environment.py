@@ -315,6 +315,8 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
 
         # NOTE(rob2u): might be worth trying to parse the entire state of the VM (as above)
         if code:
+            assert len(code) <= self.max_code_length, "Code too long! Make sure other state variables are not part of the code."
+
             vm_observation = np.zeros(3)
             code_filler = [0] * (self.max_code_length - len(code))
             observation = np.concatenate(
