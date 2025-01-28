@@ -59,6 +59,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         only_reward_on_ret: bool = True,
         action_masking: bool = True,
         add_vm_state_to_observations: bool = False,
+        only_reward_of_first_vm: bool = True,
         **kwargs: Any,
     ) -> None:
         """Initializes the environment
@@ -73,6 +74,8 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
             max_m: The maximum number of edges in the graph. Defaults to 3.
             only_reward_on_ret: Toggles if the reward should only be returned when the predicted ACTION was RET.
             action_masking: Toggles if we want to use strong action masking (if False we also use action masking but only for branches)
+            add_vm_state_to_observations: Toggles if we want to add the VM state to the observation space
+            only_reward_of_first_vm: Toggles if we want to return the reward for the first VM only or the mean reward of all VMs
         """
 
         super().__init__()
@@ -97,6 +100,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         self.only_reward_on_ret = only_reward_on_ret
         self.action_masking = action_masking
         self.add_vm_state_to_observations = add_vm_state_to_observations
+        self.only_reward_of_first_vm = only_reward_of_first_vm
 
         self.init_args = kwargs
         self.init_args.update(
@@ -109,6 +113,8 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
                 "reset_for_every_run": self.reset_for_every_run,
                 "only_reward_on_ret": self.only_reward_on_ret,
                 "action_masking": self.action_masking,
+                "add_vm_state_to_observations": self.add_vm_state_to_observations,
+                "only_reward_of_first_vm": self.only_reward_of_first_vm,
             }
         )
 
@@ -194,7 +200,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
 
         return (
             observations[0],
-            sum(rewards) / len(rewards),
+            rewards[0] if self.only_reward_of_first_vm else sum(rewards) / len(rewards),
             terminals[0],
             truncateds[0],
             metrics,

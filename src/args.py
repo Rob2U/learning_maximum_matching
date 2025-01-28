@@ -22,6 +22,7 @@ class GlobalArgs(Serializable):
 
     # ENVIRONMENT -- GRAPH Generation
     num_vms_per_env: int = 100
+    only_reward_of_first_vm: bool = False
     min_n: int = 3
     min_m: int = 3
     max_n: int = 3

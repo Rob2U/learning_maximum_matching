@@ -2,9 +2,10 @@ from typing import Any, Dict, List, Type
 
 from stable_baselines3.common.callbacks import BaseCallback
 
-from models.policy_nets import CustomActorCriticPolicy
 from environment.environment import Transpiler
 from environment.vm_state import AbstractCommand
+from models.policy_nets import CustomActorCriticPolicy
+
 
 class WandbLoggingCallback(BaseCallback):
     """See https://stable-baselines3.readthedocs.io/en/master/guide/callbacks.html#custom-callback"""
@@ -97,12 +98,8 @@ class WandbLoggingCallback(BaseCallback):
             },
             step=self.num_timesteps,
         )
-        
-    def get_code_from_state(
-        self,
-        state: List[int]
-    ) -> List[Type[AbstractCommand]]:
+
+    def get_code_from_state(self, state: List[int]) -> List[Type[AbstractCommand]]:
         code_size = self.global_args["max_code_length"]
         code = state[-code_size:]
         return Transpiler.intToCommand([int(a) for a in code])  # type: ignore
-

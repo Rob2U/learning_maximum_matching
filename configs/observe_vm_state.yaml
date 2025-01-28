@@ -3,14 +3,14 @@ iterations: 250000
 max_code_length: 32
 reset_for_every_run: False
 num_vms_per_env: 100
-only_reward_of_first_vm: False
+only_reward_of_first_vm: True
 action_masking: True
 vectorize_environment: False
 device: cpu
 
 # STATE
 # currently only adds the state of the first VM to the observation. Therefore, it makes sense to set num_vms_per_env to 1 if add_vm_state_to_observations is set to True
-add_vm_state_to_observations: False
+add_vm_state_to_observations: True
 
 # REWARDs
 only_reward_on_ret: False
