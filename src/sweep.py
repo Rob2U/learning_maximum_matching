@@ -10,9 +10,9 @@ import wandb
 
 sweep_config = {
     "program": "src/train.py",
-    "name": "always_reward",
+    "name": "vm-observations-in-state",
     "method": "bayes",
-    "metric": {"goal": "maximize", "name": "best_reward_avg"},
+    "metric": {"goal": "maximize", "name": "best_end_reward"},
     "parameters": {
         "config_path": {
             "values": ["configs/config.yaml"],
