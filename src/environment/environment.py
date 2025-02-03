@@ -230,7 +230,9 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         instruction = Transpiler.intToCommand([action])[0]
         truncated = not self.vms[vm_index].append_instruction(instruction)
         result, vm_state = self.vms[vm_index].run()
-        _reward, metrics = reward(result, vm_state, **self.init_args)
+        
+        reward_args = {**self.init_args, "ep_prev_reward": sum(self.current_episode_rewards) if self.current_episode_rewards else 0}
+        _reward, metrics = reward(result, vm_state, **reward_args)
 
         # NOTE(rob2u): might be worth trying to parse the entire return state of the VM + code
         vm_observation = np.array(

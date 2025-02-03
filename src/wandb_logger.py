@@ -15,6 +15,7 @@ class WandbLoggingCallback(BaseCallback):
         self.wandb_run = wandb_run
         self.global_args = global_args
         self.best_reward_avg = -float("inf")
+        self.best_ep_reward = -float("inf")
         self.best_end_reward = -float("inf")
         self.best_code = []
         self.episode_counter = 0
@@ -73,6 +74,10 @@ class WandbLoggingCallback(BaseCallback):
         del averages["step_reward_avg"]
         if end_reward > self.best_end_reward:
             self.best_end_reward = end_reward
+            
+        ep_reward = env_info["episode"]["r"]
+        if ep_reward > self.best_ep_reward:
+            self.best_ep_reward = ep_reward
             self.best_code = "[" + ", ".join([str(c()) for c in example_program]) + "]"
 
         avg_entropy = (
@@ -89,8 +94,8 @@ class WandbLoggingCallback(BaseCallback):
                 "best_reward_avg": self.best_reward_avg,
                 "best_end_reward": self.best_end_reward,
                 "best_code": self.best_code,
+                "best_ep_reward": self.best_ep_reward,
                 "end_reward": end_reward,
-                # "program": program,
                 "t?": t,
                 "avg_entropy": avg_entropy,
                 "episode": self.episode_counter,

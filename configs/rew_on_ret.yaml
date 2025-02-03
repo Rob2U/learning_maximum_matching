@@ -5,7 +5,7 @@ reset_for_every_run: False
 num_vms_per_env: 100
 action_masking: True
 vectorize_environment: False
-device: cpu
+device: cuda
 
 # REWARDs
 only_reward_on_ret: True
@@ -20,11 +20,11 @@ max_m: 3
 
 # MODEL
 gamma: 0.99
-layer_dim_pi: 128
-layer_dim_vf: 128
-feature_dim: 128
+layer_dim_pi: 512
+layer_dim_vf: 512
+feature_dim: 512
 
-fe_d_model: 128
+fe_d_model: 512
 fe_nhead: 4
 fe_num_blocks: 4
 
@@ -43,3 +43,4 @@ reward_fn:
 
   reward_correct_edges: 1.0
   punish_mst_weight_too_large: 1.0
+  punish_too_many_add_edge_instructions: 0.25

@@ -102,6 +102,12 @@ def f_score_mst(
     return f_beta, {"precision": precision, "recall": recall, "f_beta": f_beta}
 
 
+def punish_no_improvement(
+    result: Set[Edge], vm_state: VMState, ep_prev_reward: float = 0.0, **kwargs: Any
+) -> Tuple[float, Dict[str, Any]]:
+    return -ep_prev_reward, {"ep_prev_reward": ep_prev_reward}
+
+
 def punish_mst_weight_too_large(
     result: Set[Edge], vm_state: VMState, **kwargs: Any
 ) -> Tuple[float, Dict[str, Any]]:

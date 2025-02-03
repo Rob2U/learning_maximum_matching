@@ -8,7 +8,7 @@
       "program": "${workspaceFolder}/src/train.py",
       "args": [
         "--config_path",
-        "configs/rew_on_ret_mult_punish.yaml"
+        "configs/config.yaml"
       ],
       "purpose": [
         "debug-test"

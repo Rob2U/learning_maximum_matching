@@ -65,7 +65,8 @@ def execute_program(
 
         # run the code
         result, vm_state = test_environment.vms[0].run()
-        observed_reward, observed_metric = reward(result, vm_state, **env_args)
+        reward_args = {**test_environment.init_args, "ep_prev_reward": sum(rewards, 0.0)}
+        observed_reward, observed_metric = reward(result, vm_state, **reward_args)
         rewards.append(observed_reward)
         for key, value in observed_metric.items():
             metrics[key].append(value)

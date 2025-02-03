@@ -10,12 +10,15 @@ import wandb
 
 sweep_config = {
     "program": "src/train.py",
-    "name": "vm-observations-in-state",
+    "name": "better_rewards_mlp_beta0.5",
     "method": "bayes",
-    "metric": {"goal": "maximize", "name": "best_end_reward"},
+    "metric": {"goal": "maximize", "name": "best_ep_reward"},
     "parameters": {
         "config_path": {
             "values": ["configs/config.yaml"],
+        },
+        "beta": {
+            "values": [0.5],
         },
         "learning_rate": {
             "distribution": "log_uniform",
