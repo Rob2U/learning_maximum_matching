@@ -17,9 +17,6 @@ sweep_config = {
         "config_path": {
             "values": ["configs/config.yaml"],
         },
-        "beta": {
-            "values": [0.5],
-        },
         "learning_rate": {
             "distribution": "log_uniform",
             "min": math.log(1e-5),

@@ -28,6 +28,8 @@ fe_d_model: 512
 fe_nhead: 4
 fe_num_blocks: 4
 
+
+beta: 0.5
 reward_fn:
   punish_code_length: 0.0
   f_score_mst: 0.0
