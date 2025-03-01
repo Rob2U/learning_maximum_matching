@@ -1,6 +1,6 @@
 # GENERAL
 iterations: 250000
-max_code_length: 32
+max_code_length: 44  # = 2*punish_cap
 reset_for_every_run: False
 num_vms_per_env: 100
 only_reward_of_first_vm: False
@@ -14,14 +14,23 @@ add_vm_state_to_observations: False
 
 # REWARDs
 only_reward_on_ret: False
-punish_cap: 24
+# For Rings you require:
+# \sum_{n - 1}(PUSH,RESET,WRITE,(i - 1)*{POP,IF,WRITE},ADD) + RET
+# = \sum_{i=1}^{n-1}(4 + 3*(i - 1)) + 1
+# = \sum_{i=1}^{n-1}(3*i + 1) + 1
+# = 3*\sum_{i=1}^{n-1}i + n - 1 + 1
+# = 3*(n-1)*n/2 + n
+# = 3*(n^2 - n)/2 + n
+# = 3*n^2/2 - 3*n/2 + n
+# = 3/2*n^2 - n/2
+punish_cap: 22 # = 3/2*16 - 2
 
 # ENVIRONMENT -- GRAPH Generation
-graph_type: "random" # "random" or "ring"
-min_n: 3
-min_m: 3 # only relevant for random. For ring, m is always n
-max_n: 3
-max_m: 3 # only relevant for random. For ring, m is always n
+graph_type: "ring" # "random" or "ring"
+min_n: 4
+min_m: 4 # only relevant for random. For ring, m is always n
+max_n: 4
+max_m: 4 # only relevant for random. For ring, m is always n
 
 
 # MODEL
