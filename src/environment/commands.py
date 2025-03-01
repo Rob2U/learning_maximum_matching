@@ -639,7 +639,7 @@ if __name__ == "__main__":
         POP_EDGE,
         IF_EDGE_WEIGHT_LT,
         WRITE_EDGE_REGISTER,
-        POP_EDGE,
+        POP_EDGE,  # probably not required but resets the stack
         ADD_EDGE_TO_SET,
         # continue for 2nd edge
         PUSH_LEGAL_EDGES,
@@ -648,7 +648,7 @@ if __name__ == "__main__":
         POP_EDGE,
         IF_EDGE_WEIGHT_LT,
         WRITE_EDGE_REGISTER,
-        POP_EDGE,
+        POP_EDGE,  # probably not required but resets the stack
         ADD_EDGE_TO_SET,
         RET,
     ]

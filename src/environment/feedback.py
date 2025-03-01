@@ -1,6 +1,4 @@
-from typing import Any, Dict, List, Protocol, Set, Tuple, runtime_checkable
-
-import wandb
+from typing import Any, Dict, Protocol, Set, Tuple, runtime_checkable
 
 from .algorithms import compute_mst
 from .commands import ADD_EDGE_TO_SET, IF_EDGE_WEIGHT_LT, RET, WRITE_EDGE_REGISTER
@@ -196,7 +194,7 @@ def punish_too_many_add_edge_instructions(
 
 def reward_if_write_edge_register_combination(
     result: Set[Edge], vm_state: VMState, **kwargs: Any
-):
+) -> Tuple[float, Dict[str, Any]]:
     """Reward the algorithm for writing IF statements together with WRITE_EDGE instructions. Range: [0, 1]"""
     # if instructions
     if_instructions_idxs = [
@@ -347,8 +345,8 @@ if __name__ == "__main__":
     ]
     vm_state = VMState(input=generate_graph(3, 3), code=code)
 
-    reward, metrics = punish_too_many_add_edge_instructions([], vm_state)
-    print(reward, metrics)
+    rew, metrics = punish_too_many_add_edge_instructions(set([]), vm_state)
+    print(rew, metrics)
 
-    reward, metrics = reward_if_write_edge_register_combination([], vm_state)
-    print(reward, metrics)
+    rew, metrics = reward_if_write_edge_register_combination(set([]), vm_state)
+    print(rew, metrics)
