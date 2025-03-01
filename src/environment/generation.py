@@ -71,7 +71,41 @@ def generate_graph(
     return graph
 
 
+def generate_ring(
+    n: int, seed: Union[int, None] = None, distinct_weights: bool = True
+) -> Graph:
+    """Generate a ring graph with n nodes"""
+    if seed:
+        random.seed(seed)
+    graph = Graph()
+    for i in range(n):
+        graph.add_node(i)
+
+    indices = list(range(n))
+    random.shuffle(indices)
+    for i in range(n):
+        graph.add_edge(indices[i], indices[(i + 1) % n], 0)
+
+    weight_max = n
+    random.shuffle(graph.edges)  # first shuffle for random order of min max edges
+    for edge in graph.edges:
+        if distinct_weights:
+            edge.weight = weight_max
+            weight_max -= 1
+        else:
+            edge.weight = random.randint(
+                1, n
+            )  # second shuffle to prevent g.edges to be sorted
+    random.shuffle(graph.edges)
+
+    return graph
+
+
 if __name__ == "__main__":
     graph = generate_graph(5, 6)
     print(graph.edges)
     print(graph.nodes)
+
+    ring = generate_ring(5)
+    print(ring.edges)
+    print(ring.nodes)
