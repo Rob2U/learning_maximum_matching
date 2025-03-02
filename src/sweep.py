@@ -10,12 +10,12 @@ import wandb
 
 sweep_config = {
     "program": "src/train.py",
-    "name": "better_rewards_mlp_beta0.5",
+    "name": "ring:n=3-6",
     "method": "bayes",
     "metric": {"goal": "maximize", "name": "best_ep_reward"},
     "parameters": {
         "config_path": {
-            "values": ["configs/config.yaml"],
+            "values": ["configs/ring.yaml"],
         },
         "learning_rate": {
             "distribution": "log_uniform",
@@ -37,6 +37,24 @@ sweep_config = {
             "min": 0.05,
             "max": 0.5,
         },
+        "min_n": {
+            "values": [3]
+        },
+        "max_n": {
+            "values": [6]
+        },
+        "min_m": {
+            "values": [3]
+        },
+        "max_m": {
+            "values": [6]
+        },
+        "max_code_len": {
+            "values": [102]
+        },
+        "punish_cap": {
+            "values": [51]
+        }
     },
 }
 

@@ -100,6 +100,11 @@ def generate_ring(
 
     return graph
 
+def generate_almost_tree(
+    n: int, i: int, seed: Union[int, None] = None, distinct_weights: bool = True
+) -> Graph:
+    """Generate a graph with n nodes and n - 1 + i edges"""
+    return generate_graph(n, n - 1 + i, seed, distinct_weights)
 
 if __name__ == "__main__":
     graph = generate_graph(5, 6)

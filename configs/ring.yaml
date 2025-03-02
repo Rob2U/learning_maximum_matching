@@ -1,6 +1,6 @@
 # GENERAL
 iterations: 250000
-max_code_length: 44  # = 2*punish_cap
+max_code_length: 102  # = 2*punish_cap
 reset_for_every_run: False
 num_vms_per_env: 100
 only_reward_of_first_vm: False
@@ -23,15 +23,15 @@ only_reward_on_ret: False
 # = 3*(n^2 - n)/2 + n
 # = 3*n^2/2 - 3*n/2 + n
 # = 3/2*n^2 - n/2
-punish_cap: 22 # = 3/2*16 - 2
+punish_cap: 51 # e.g. for 4: 22 = 3/2*4^2 - 4/2
 
 # ENVIRONMENT -- GRAPH Generation
 graph_type: "ring" # "random" or "ring"
-min_n: 4
-min_m: 4 # only relevant for random. For ring, m is always n
-max_n: 4
-max_m: 4 # only relevant for random. For ring, m is always n
-
+min_n: 5
+min_m: 5 # only relevant for random. For ring, m is always n
+max_n: 5
+max_m: 5 # only relevant for random. For ring, m is always n
+tree_i: 1 # only relevant for almost_tree. how many edges to add to the tree.
 
 # MODEL
 gamma: 0.99

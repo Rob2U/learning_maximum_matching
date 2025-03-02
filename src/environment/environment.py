@@ -39,7 +39,7 @@ from .commands import (
     ConditionalCommand,
 )
 from .feedback import reward
-from .generation import generate_graph, generate_ring
+from .generation import generate_graph, generate_ring, generate_almost_tree
 from .vm import VirtualMachine
 from .vm_state import AbstractCommand
 
@@ -324,10 +324,10 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
             elif self.graph_type == "ring":
                 n = random.randint(self.min_n, self.max_n)
                 graph = generate_ring(n, seed=None)
-            # elif self.graph_type == "almost_tree":
-                # n = random.randint(self.min_n, self.max_n)
-                # i = random.randint(self.min_tree_i, self.max_tree_i)
-                # graph = generate_almost_tree(n, i, seed=None)
+            elif self.graph_type == "almost_tree":
+                n = random.randint(self.min_n, self.max_n)
+                i = random.randint(self.min_tree_i, self.max_tree_i)
+                graph = generate_almost_tree(n, i, seed=None)
             else:
                 raise ValueError("Bad graph type! " + self.graph_type)
 

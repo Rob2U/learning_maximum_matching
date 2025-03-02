@@ -17,11 +17,12 @@ only_reward_on_ret: False
 punish_cap: 24
 
 # ENVIRONMENT -- GRAPH Generation
-graph_type: "random" # "random" or "ring"
+graph_type: "random" # "random" or "ring" or "almost_tree"
 min_n: 3
-min_m: 3 # only relevant for random. For ring, m is always n
+min_m: 3 # only relevant for random. For ring, m is always n. For almost_tree, m is always n + i
 max_n: 3
-max_m: 3 # only relevant for random. For ring, m is always n
+max_m: 3 # only relevant for random. For ring, m is always n. For almost_tree, m is always n + i
+tree_i: 1 # only relevant for almost_tree. how many edges to add to the tree.
 
 
 # MODEL
