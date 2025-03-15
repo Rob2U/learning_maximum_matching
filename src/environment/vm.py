@@ -20,7 +20,7 @@ class VirtualMachine:
     ):
         self.vm_state = VMState(input, code)
 
-        self.max_runtime = 100 + len(input.edges) * len(input.nodes) ** 2
+        self.max_runtime = 100 + (len(input.edges) * len(input.nodes)) ** 2
         self.max_code_len = max_code_len
         self.verbose = verbose
 

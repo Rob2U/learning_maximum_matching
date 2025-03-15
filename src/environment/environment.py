@@ -7,37 +7,52 @@ import gymnasium as gym
 import numpy as np
 import numpy.typing as npt
 
-from .commands import (
-    ADD_EDGE_TO_SET,
-    ADD_TO_OUT,
-    IF_EDGE_SET_CAPACITY_REMAINING,
-    IF_EDGE_STACK_REMAINING,
-    IF_EDGE_WEIGHT_LT,
-    IF_HEAP_EMPTY,
-    IF_IS_NOT_FIRST_EDGE,
-    IF_IS_NOT_FIRST_NODE,
-    JUMP,
-    NEXT_EDGE,
-    NEXT_NODE,
-    NOP,
-    POP_EDGE,
-    POP_HEAP,
-    POP_MARK,
-    POP_NODE,
-    PUSH_CLONE_NODE,
-    PUSH_HEAP,
+# from .commands import (
+#     ADD_EDGE_TO_SET,
+#     ADD_TO_OUT,
+#     IF_EDGE_SET_CAPACITY_REMAINING,
+#     IF_EDGE_STACK_REMAINING,
+#     IF_EDGE_WEIGHT_LT,
+#     IF_HEAP_EMPTY,
+#     IF_IS_NOT_FIRST_EDGE,
+#     IF_IS_NOT_FIRST_NODE,
+#     JUMP,
+#     NEXT_EDGE,
+#     NEXT_NODE,
+#     NOP,
+#     POP_EDGE,
+#     POP_HEAP,
+#     POP_MARK,
+#     POP_NODE,
+#     PUSH_CLONE_NODE,
+#     PUSH_HEAP,
+#     PUSH_LEGAL_EDGES,
+#     PUSH_MARK,
+#     PUSH_START_NODE,
+#     REMOVE_EDGE_FROM_SET,
+#     RESET_EDGE_REGISTER,
+#     RESET_EDGE_WEIGHT,
+#     RET,
+#     TO_NEIGHBOR,
+#     WRITE_EDGE_REGISTER,
+#     WRITE_EDGE_WEIGHT,
+#     ConditionalCommand,
+# )
+
+from .commands_loops import (
     PUSH_LEGAL_EDGES,
     PUSH_MARK,
-    PUSH_START_NODE,
-    REMOVE_EDGE_FROM_SET,
-    RESET_EDGE_REGISTER,
-    RESET_EDGE_WEIGHT,
+    POP_AND_WRITE_EDGE_REGISTER,
+    IF_EDGE_WEIGHT_LT,
+    POP_AND_WRITE_EDGE_REGISTER,
+    ADD_EDGE_TO_SET_AND_RESET_REGISTER,
+    IF_EDGE_STACK_REMAINING_JUMP_ELSE_POP_MARK,
     RET,
-    TO_NEIGHBOR,
-    WRITE_EDGE_REGISTER,
-    WRITE_EDGE_WEIGHT,
+    NOP,
     ConditionalCommand,
 )
+
+
 from .feedback import reward
 from .generation import generate_graph, generate_ring, generate_almost_tree
 from .vm import VirtualMachine
@@ -61,7 +76,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         only_reward_on_ret: bool = True,
         action_masking: bool = True,
         add_vm_state_to_observations: bool = False,
-        only_reward_of_first_vm: bool = True,
+        only_reward_of_first_vm: bool = False,
         **kwargs: Any,
     ) -> None:
         """Initializes the environment
@@ -149,6 +164,15 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         observations, rewards, terminals, truncateds = [], [], [], []
 
         metrics: defaultdict[str, List[Any]] = defaultdict(list)
+        
+        assert all([len(self.vms[0].vm_state.code) == len(vm.vm_state.code) for vm in self.vms]), "Bad code length!"
+        
+        if self.reset_for_every_run:
+            code = self.vms[0].vm_state.code
+            previous_rewards = self.current_episode_rewards
+            self.reset(code=code)
+            self.current_episode_rewards = previous_rewards
+        
         for i in range(self.num_vms_per_env):
             observation, _reward, terminal, truncated, vm_metrics = self.step_vm(
                 action, i
@@ -202,8 +226,11 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
 
         assert all(
             [val == truncateds[0] for val in truncateds]
-        ), "Bad truncated values: " + str(truncated)
+        ), "Bad truncated values: " + str(truncateds)
 
+        if rewards[0] > 0.0:
+            0
+        
         return (
             observations[0],
             rewards[0] if self.only_reward_of_first_vm else sum(rewards) / len(rewards),
@@ -230,14 +257,11 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
             "Bad VM index!: " + str(vm_index) + " for " + str(self.num_vms_per_env)
         )
 
-        if self.reset_for_every_run:
-            self.reset(code=self.vms[vm_index].vm_state.code)
-
         instruction = Transpiler.intToCommand([action])[0]
         truncated = not self.vms[vm_index].append_instruction(instruction)
         result, vm_state = self.vms[vm_index].run()
         
-        reward_args = {**self.init_args, "ep_prev_reward": sum(self.current_episode_rewards) if self.current_episode_rewards else 0}
+        reward_args = {**self.init_args, "ep_prev_reward": sum(self.current_episode_rewards)}
         _reward, metrics = reward(result, vm_state, **reward_args)
 
         # NOTE(rob2u): might be worth trying to parse the entire return state of the VM + code
@@ -333,7 +357,7 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
 
             self.vms.append(
                 VirtualMachine(
-                    code if code is not None else [],
+                    code.copy() if code is not None else [],
                     graph,
                     max_code_len=self.max_code_length,
                 )
@@ -367,37 +391,50 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         pass
 
 
-COMMAND_REGISTRY: List[Type[AbstractCommand]] = [
-    NOP,
-    RET,  # only applicable if no if statement was is before
-    # PUSH_MARK,
-    # JUMP,
-    # POP_MARK,
-    # PUSH_START_NODE,
-    # PUSH_CLONE_NODE,
-    # POP_NODE,
-    # PUSH_HEAP,
-    # POP_HEAP,
-    # IF_HEAP_EMPTY,
-    # NEXT_NODE,
-    # NEXT_EDGE,
-    # TO_NEIGHBOR,
-    # IF_IS_NOT_FIRST_EDGE,
-    # IF_IS_NOT_FIRST_NODE,
-    # WRITE_EDGE_WEIGHT,  # always applicable
-    # RESET_EDGE_WEIGHT,  # always applicable
-    # ADD_TO_OUT,
-    IF_EDGE_WEIGHT_LT,  # not two in a row
-    WRITE_EDGE_REGISTER,  # <-NOT SEEN      if PUSH_LEGAL_EDGES before and not two in a row
-    RESET_EDGE_REGISTER,  # always applicable
-    POP_EDGE,  # <- NOT SEEN       only if PUSH_LEGAL_EDGES before
-    # IF_EDGE_STACK_REMAINING,
-    PUSH_LEGAL_EDGES,  # always applicable
-    ADD_EDGE_TO_SET,  # not two in a row
-    # REMOVE_EDGE_FROM_SET,
-    # IF_EDGE_SET_CAPACITY_REMAINING,
-]
+# COMMAND_REGISTRY: List[Type[AbstractCommand]] = [
+#     NOP,
+#     RET,  # only applicable if no if statement was is before
+#     # PUSH_MARK,
+#     # JUMP,
+#     # POP_MARK,
+#     # PUSH_START_NODE,
+#     # PUSH_CLONE_NODE,
+#     # POP_NODE,
+#     # PUSH_HEAP,
+#     # POP_HEAP,
+#     # IF_HEAP_EMPTY,
+#     # NEXT_NODE,
+#     # NEXT_EDGE,
+#     # TO_NEIGHBOR,
+#     # IF_IS_NOT_FIRST_EDGE,
+#     # IF_IS_NOT_FIRST_NODE,
+#     # WRITE_EDGE_WEIGHT,  # always applicable
+#     # RESET_EDGE_WEIGHT,  # always applicable
+#     # ADD_TO_OUT,
+#     IF_EDGE_WEIGHT_LT,  # not two in a row
+#     WRITE_EDGE_REGISTER,  # <-NOT SEEN      if PUSH_LEGAL_EDGES before and not two in a row
+#     RESET_EDGE_REGISTER,  # always applicable
+#     POP_EDGE,  # <- NOT SEEN       only if PUSH_LEGAL_EDGES before
+#     # IF_EDGE_STACK_REMAINING,
+#     PUSH_LEGAL_EDGES,  # always applicable
+#     ADD_EDGE_TO_SET,  # not two in a row
+#     # REMOVE_EDGE_FROM_SET,
+#     # IF_EDGE_SET_CAPACITY_REMAINING,
+# ]
 
+COMMAND_REGISTRY: List[Type[AbstractCommand]] = [
+        NOP,
+        RET,
+        PUSH_LEGAL_EDGES,
+        PUSH_MARK,
+        POP_AND_WRITE_EDGE_REGISTER,
+        IF_EDGE_WEIGHT_LT,
+        POP_AND_WRITE_EDGE_REGISTER,
+        ADD_EDGE_TO_SET_AND_RESET_REGISTER,
+        PUSH_LEGAL_EDGES,
+        IF_EDGE_STACK_REMAINING_JUMP_ELSE_POP_MARK,
+]
+    
 
 class Transpiler:
     """Translates a list of integers to a list of AbstractCommands and back"""
@@ -412,54 +449,54 @@ class Transpiler:
         return [COMMAND_REGISTRY[op] for op in code]
 
 
-if __name__ == "__main__":
-    # Lets write PRIM algorithm in our instruction set
-    test_graph = generate_graph(10, 45)
-    print("##################")
-    print("Graph:")
-    print(test_graph)
+# if __name__ == "__main__":
+#     # Lets write PRIM algorithm in our instruction set
+#     test_graph = generate_graph(10, 45)
+#     print("##################")
+#     print("Graph:")
+#     print(test_graph)
 
-    code = [
-        PUSH_MARK,  # LOOP START
-        PUSH_LEGAL_EDGES,  # push stack of edges that are allowed to be added
-        RESET_EDGE_REGISTER,
-        PUSH_MARK,  # INNER LOOP START
-        IF_EDGE_WEIGHT_LT,  # if top of edge stack is greater than edge register
-        WRITE_EDGE_REGISTER,  # update edge register to edge on top of stack
-        POP_EDGE,  # pop edge from edge stack
-        IF_EDGE_STACK_REMAINING,  # INNER LOOP END CONDITION: if edge stack is empty
-        JUMP,  # to INNER LOOP START
-        ADD_EDGE_TO_SET,  # final command before inner loop ends: add the edge from our edge register to the set
-        POP_MARK,  # INNER LOOP END
-        IF_EDGE_SET_CAPACITY_REMAINING,  # LOOP END CONDITION: if n - 1 edges have been marked
-        JUMP,  # to LOOP START
-        POP_MARK,  # LOOP END
-        RET,  # end of program (indicate that we do not need to generate more code)
-    ]
+#     code = [
+#         PUSH_MARK,  # LOOP START
+#         PUSH_LEGAL_EDGES,  # push stack of edges that are allowed to be added
+#         RESET_EDGE_REGISTER,
+#         PUSH_MARK,  # INNER LOOP START
+#         IF_EDGE_WEIGHT_LT,  # if top of edge stack is greater than edge register
+#         WRITE_EDGE_REGISTER,  # update edge register to edge on top of stack
+#         POP_EDGE,  # pop edge from edge stack
+#         IF_EDGE_STACK_REMAINING,  # INNER LOOP END CONDITION: if edge stack is empty
+#         JUMP,  # to INNER LOOP START
+#         ADD_EDGE_TO_SET,  # final command before inner loop ends: add the edge from our edge register to the set
+#         POP_MARK,  # INNER LOOP END
+#         IF_EDGE_SET_CAPACITY_REMAINING,  # LOOP END CONDITION: if n - 1 edges have been marked
+#         JUMP,  # to LOOP START
+#         POP_MARK,  # LOOP END
+#         RET,  # end of program (indicate that we do not need to generate more code)
+#     ]
 
-    print("##################")
-    print("Code:")
-    print("\n".join([f"{i + 1}: {op.__name__}" for i, op in enumerate(code)]))
+#     print("##################")
+#     print("Code:")
+#     print("\n".join([f"{i + 1}: {op.__name__}" for i, op in enumerate(code)]))
 
-    print("##################")
-    print("Stack Trace:")
+#     print("##################")
+#     print("Stack Trace:")
 
-    vm = VirtualMachine(code, test_graph, verbose=True)
+#     vm = VirtualMachine(code, test_graph, verbose=True)
 
-    print("##################")
-    print("Graph:")
-    print(test_graph)
+#     print("##################")
+#     print("Graph:")
+#     print(test_graph)
 
-    print("##################")
-    result, vm_state = vm.run()
-    print("##################")
+#     print("##################")
+#     result, vm_state = vm.run()
+#     print("##################")
 
-    if not vm_state.finished:
-        print("Program did not finish orderly!")
-    else:
-        print("Result:")
-        print(result)
+#     if not vm_state.finished:
+#         print("Program did not finish orderly!")
+#     else:
+#         print("Result:")
+#         print(result)
 
-        print("##################")
-        print("Actual MST:")
-        print(vm.vm_state.edge_set)
+#         print("##################")
+#         print("Actual MST:")
+#         print(vm.vm_state.edge_set)

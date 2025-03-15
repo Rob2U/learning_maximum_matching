@@ -80,7 +80,7 @@ class RET(AbstractCommand):
 
 
 # NOTE: !!!!!!!!!!!!!!!
-# Different to original PUSH_MARK, only allowed once per program
+# Different to original PUSH_MARK, only allowed once per program, not after IF
 class PUSH_MARK(AbstractCommand):
     """Adds a code marker at the position of the current pc. Using JUMP we can loop back to this position later."""
 
@@ -89,6 +89,9 @@ class PUSH_MARK(AbstractCommand):
 
     def is_applicable(self, state: VMState) -> bool:
         # only allow PUSH_MARK once
+        if not is_last_command_different_to(state.code, IF_EDGE_WEIGHT_LT):
+            return False
+        
         return not does_command_exist(state.code, PUSH_MARK)
 
     def is_comparison(self) -> bool:
@@ -104,7 +107,6 @@ class IF_EDGE_STACK_REMAINING_JUMP_ELSE_POP_MARK(AbstractCommand):
     def execute(self, state):
         if len(state.mark_stack) > 0:
             if len(state.edge_stack) > 0:
-                print("jumping back to mark")
                 state.pc = (
                     state.mark_stack.pop()
                 )  # we jump before the PUSH_MARK which is therefore added to the mark_stack again
@@ -123,7 +125,10 @@ class IF_EDGE_STACK_REMAINING_JUMP_ELSE_POP_MARK(AbstractCommand):
         # - move RESET_EDGE_REGISTER into ADD_EDGE_TO_SET
         # this ensures that the state will always change -> no endless loop possible
 
-        if not does_command_exist(state.code, PUSH_MARK) or len(state.mark_stack) == 0:
+        if not does_command_exist(state.code, PUSH_MARK) or len(state.mark_stack) or does_any_command_exist(state.code, [IF_EDGE_STACK_REMAINING_JUMP_ELSE_POP_MARK]):
+            return False
+        
+        if not is_last_command_different_to(state.code, IF_EDGE_WEIGHT_LT):
             return False
 
         loop_code = state.code[state.mark_stack[-1] + 1 :]
@@ -215,7 +220,6 @@ class IF_EDGE_WEIGHT_LT(ConditionalCommand):
     """
 
     def condition(self, state: VMState) -> bool:
-        print(state.edge_stack[-1].weight, state.edge_register.weight)
         return not state.edge_register or (
             len(state.edge_stack) > 0
             and state.edge_stack[-1].weight < state.edge_register.weight
@@ -288,15 +292,9 @@ if __name__ == "__main__":
     # This works for all graphs with n nodes and n edges
     # Compare two edges and add the one with the smaller weight to the edge_set. Do until no Legal edges are left.
     our_program = [
-        PUSH_LEGAL_EDGES,
         PUSH_MARK,
-        POP_AND_WRITE_EDGE_REGISTER,
         IF_EDGE_WEIGHT_LT,
-        POP_AND_WRITE_EDGE_REGISTER,
         ADD_EDGE_TO_SET_AND_RESET_REGISTER,
-        PUSH_LEGAL_EDGES,
-        IF_EDGE_STACK_REMAINING_JUMP_ELSE_POP_MARK,
-        RET,
     ]
     # test that the commands are applicable
     input_graph = generate_ring(4, 42)

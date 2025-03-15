@@ -8,7 +8,7 @@
       "program": "${workspaceFolder}/src/train.py",
       "args": [
         "--config_path",
-        "configs/config.yaml"
+        "configs/ring_with_loops.yaml"
       ],
       "purpose": [
         "debug-test"

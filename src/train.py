@@ -18,20 +18,31 @@ from stable_baselines3.common.vec_env import SubprocVecEnv
 
 import wandb
 from args import GlobalArgs
-from environment.commands import (
-    ADD_EDGE_TO_SET,
-    IF_EDGE_SET_CAPACITY_REMAINING,
-    IF_EDGE_STACK_REMAINING,
-    IF_EDGE_WEIGHT_LT,
-    JUMP,
-    POP_EDGE,
-    POP_MARK,
-    PUSH_LEGAL_EDGES,
-    PUSH_MARK,
-    RESET_EDGE_REGISTER,
+# from environment.commands import (
+#     ADD_EDGE_TO_SET,
+#     IF_EDGE_SET_CAPACITY_REMAINING,
+#     IF_EDGE_STACK_REMAINING,
+#     IF_EDGE_WEIGHT_LT,
+#     JUMP,
+#     POP_EDGE,
+#     POP_MARK,
+#     PUSH_LEGAL_EDGES,
+#     PUSH_MARK,
+#     RESET_EDGE_REGISTER,
+#     RET,
+#     WRITE_EDGE_REGISTER,
+# )
+from environment.commands_loops import (
+    NOP,
     RET,
-    WRITE_EDGE_REGISTER,
+    PUSH_MARK,
+    IF_EDGE_STACK_REMAINING_JUMP_ELSE_POP_MARK,
+    POP_AND_WRITE_EDGE_REGISTER,
+    ADD_EDGE_TO_SET_AND_RESET_REGISTER,
+    IF_EDGE_WEIGHT_LT,
+    PUSH_LEGAL_EDGES,
 )
+
 from environment.environment import COMMAND_REGISTRY, MSTCodeEnvironment, Transpiler
 from environment.feedback import reward
 from environment.vm_state import AbstractCommand
@@ -287,27 +298,18 @@ if __name__ == "__main__":
     # ]
 
     # very naive program that just adds the smallest to edges to the set (we have n=3 and m=3)
+    # 
+    
+    # PROGRAM using the ring loop instruction set
     our_program = [
         PUSH_LEGAL_EDGES,
-        RESET_EDGE_REGISTER,
-        WRITE_EDGE_REGISTER,
-        POP_EDGE,
-        IF_EDGE_WEIGHT_LT,
-        WRITE_EDGE_REGISTER,
-        POP_EDGE,
-        IF_EDGE_WEIGHT_LT,
-        WRITE_EDGE_REGISTER,
-        POP_EDGE,
-        ADD_EDGE_TO_SET,
-        # continue for 2nd edge
-        PUSH_LEGAL_EDGES,
-        RESET_EDGE_REGISTER,
-        WRITE_EDGE_REGISTER,
-        POP_EDGE,
-        IF_EDGE_WEIGHT_LT,
-        WRITE_EDGE_REGISTER,
-        POP_EDGE,
-        ADD_EDGE_TO_SET,
+        PUSH_MARK,
+            POP_AND_WRITE_EDGE_REGISTER,
+            IF_EDGE_WEIGHT_LT,
+            POP_AND_WRITE_EDGE_REGISTER,
+            ADD_EDGE_TO_SET_AND_RESET_REGISTER,
+            PUSH_LEGAL_EDGES,
+        IF_EDGE_STACK_REMAINING_JUMP_ELSE_POP_MARK,
         RET,
     ]
 

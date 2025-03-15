@@ -15,7 +15,7 @@ sweep_config = {
     "metric": {"goal": "maximize", "name": "best_ep_reward"},
     "parameters": {
         "config_path": {
-            "values": ["configs/ring.yaml"],
+            "values": ["configs/ring_with_loops.yaml"],
         },
         "learning_rate": {
             "distribution": "log_uniform",

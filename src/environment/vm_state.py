@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Set
+from typing import List, Set, Optional, cast
 
 from .structure_elements import Edge, Graph, NodeEdgePointer
 
@@ -69,11 +69,11 @@ class VMState:
     timeout: bool = False
     truncated: bool = False
 
-    def __init__(self, input: Graph, code: List[type[AbstractCommand]] = []) -> None:
+    def __init__(self, input: Graph, code: Optional[List[type[AbstractCommand]]] = None) -> None:
         self.reset()
 
         self.input = input
-        self.code = code
+        self.code = cast(List[type[AbstractCommand]], code) if code is not None else cast(List[type[AbstractCommand]], [])
 
     def reset(self) -> None:
         self.pc = 0
