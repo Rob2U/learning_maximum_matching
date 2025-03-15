@@ -1,0 +1,58 @@
+# GENERAL
+iterations: 250000
+max_code_length: 32
+reset_for_every_run: False
+num_vms_per_env: 100
+only_reward_of_first_vm: False
+action_masking: True
+vectorize_environment: False
+device: cpu
+
+# STATE
+# currently only adds the state of the first VM to the observation. Therefore, it makes sense to set num_vms_per_env to 1 if add_vm_state_to_observations is set to True
+add_vm_state_to_observations: False
+
+# REWARDs
+only_reward_on_ret: False
+punish_cap: 24
+
+# ENVIRONMENT -- GRAPH Generation
+graph_type: "random" # "random" or "ring" or "almost_tree"
+min_n: 3
+min_m: 3 # only relevant for random. For ring, m is always n. For almost_tree, m is always n + i
+max_n: 3
+max_m: 3 # only relevant for random. For ring, m is always n. For almost_tree, m is always n + i
+tree_i: 1 # only relevant for almost_tree. how many edges to add to the tree.
+
+
+# MODEL
+gamma: 0.99
+no_feature_extractor: False
+layer_dim_pi: 128
+layer_dim_vf: 128
+feature_dim: 128
+
+fe_d_model: 128
+fe_nhead: 4
+fe_num_blocks: 4
+
+beta: 0.5
+reward_fn:
+  # punish_code_length: 0.0
+  f_score_mst: 0.0
+
+  reward_finite_runtime: 0.0 # bad values (skew the reward)
+  reward_valid_spanning_tree_length: 0.0
+  reward_no_cycles: 0.0 # not implemented
+  reward_covered_nodes: 0.0
+  reward_minimality: 0.0 # bad values (skew the reward)
+  reward_efficiency: 0.0
+  reward_distance_to_MST: 0.0
+  reward_connected: 0.0
+
+  reward_correct_edges: 1.0
+  punish_mst_weight_too_large: 1.0
+  punish_no_improvement: 1.0
+
+factor_fn:
+  punish_code_length: 1.0
