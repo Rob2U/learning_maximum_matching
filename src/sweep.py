@@ -10,7 +10,7 @@ import wandb
 
 sweep_config = {
     "program": "src/train.py",
-    "name": "ring:n=3-6",
+    "name": "ring_with_loops",
     "method": "bayes",
     "metric": {"goal": "maximize", "name": "best_ep_reward"},
     "parameters": {
