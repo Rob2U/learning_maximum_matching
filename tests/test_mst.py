@@ -16,7 +16,7 @@ from environment.commands import (
     RET,
     WRITE_EDGE_REGISTER,
 )
-from environment.generation import generate_graph
+from environment.generation import generate_graph, generate_ring
 from environment.vm import VirtualMachine, VMState
 
 
@@ -210,7 +210,7 @@ def test_independent_vm() -> None:
         POP_EDGE,
         IF_EDGE_WEIGHT_LT,
         WRITE_EDGE_REGISTER,
-        POP_EDGE,
+        # POP_EDGE,
         ADD_EDGE_TO_SET,
         # continue for 2nd edge
         PUSH_LEGAL_EDGES,
@@ -226,6 +226,147 @@ def test_independent_vm() -> None:
 
     # test that the commands are applicable
     input_graph = generate_graph(3, 3, 420)
+    state = VMState(input=input_graph, code=[])
+    while state.pc < len(our_program):
+        command = our_program[state.pc]
+        print(command(), ": \t", command().is_applicable(state))
+        state.code = our_program[: state.pc]
+        command().execute(state)
+        print(state.edge_stack)
+        print(state.edge_register)
+        print(state.edge_set)
+
+        print()
+        state.pc += 1
+
+    assert state.edge_set == {
+        input_graph.edges[0],
+        input_graph.edges[2],
+    }, "Expected MST not found."
+
+
+def test_larger_rings() -> None:
+    our_program = [
+        PUSH_LEGAL_EDGES,
+        RESET_EDGE_REGISTER,
+        WRITE_EDGE_REGISTER,
+
+        POP_EDGE,
+        IF_EDGE_WEIGHT_LT,
+        WRITE_EDGE_REGISTER,
+
+        POP_EDGE,
+        IF_EDGE_WEIGHT_LT,
+        WRITE_EDGE_REGISTER,
+
+        POP_EDGE,
+        IF_EDGE_WEIGHT_LT,
+        WRITE_EDGE_REGISTER,
+
+        ADD_EDGE_TO_SET,
+
+        # continue for 2nd edge
+        PUSH_LEGAL_EDGES,
+        RESET_EDGE_REGISTER,
+        WRITE_EDGE_REGISTER,
+
+        POP_EDGE,
+        IF_EDGE_WEIGHT_LT,
+        WRITE_EDGE_REGISTER,
+
+        POP_EDGE,
+        IF_EDGE_WEIGHT_LT,
+        WRITE_EDGE_REGISTER,
+
+        ADD_EDGE_TO_SET,
+
+        # continue for 3rd edge
+        PUSH_LEGAL_EDGES,
+        RESET_EDGE_REGISTER,
+        WRITE_EDGE_REGISTER,
+        
+        POP_EDGE,
+        IF_EDGE_WEIGHT_LT,
+        WRITE_EDGE_REGISTER,
+
+        ADD_EDGE_TO_SET,
+
+        RET,
+    ]
+
+    # test that the commands are applicable
+    input_graph = generate_ring(4, 4242)
+    state = VMState(input=input_graph, code=[])
+    while state.pc < len(our_program):
+        command = our_program[state.pc]
+        print(command(), ": \t", command().is_applicable(state))
+        state.code = our_program[: state.pc]
+        command().execute(state)
+        print(state.edge_stack)
+        print(state.edge_register)
+        print(state.edge_set)
+
+        print()
+        state.pc += 1
+
+    assert state.edge_set == {
+        input_graph.edges[0],
+        input_graph.edges[1],
+        input_graph.edges[3],
+    }, "Expected MST not found."
+
+
+def test_small_rings_with_larger_program() -> None:
+    our_program = [
+        PUSH_LEGAL_EDGES,
+        RESET_EDGE_REGISTER,
+        WRITE_EDGE_REGISTER,
+
+        POP_EDGE,
+        IF_EDGE_WEIGHT_LT,
+        WRITE_EDGE_REGISTER,
+
+        POP_EDGE,
+        IF_EDGE_WEIGHT_LT,
+        WRITE_EDGE_REGISTER,
+
+        POP_EDGE,
+        IF_EDGE_WEIGHT_LT,
+        WRITE_EDGE_REGISTER,
+
+        ADD_EDGE_TO_SET,
+
+        # continue for 2nd edge
+        PUSH_LEGAL_EDGES,
+        RESET_EDGE_REGISTER,
+        WRITE_EDGE_REGISTER,
+
+        POP_EDGE,
+        IF_EDGE_WEIGHT_LT,
+        WRITE_EDGE_REGISTER,
+
+        POP_EDGE,
+        IF_EDGE_WEIGHT_LT,
+        WRITE_EDGE_REGISTER,
+
+        ADD_EDGE_TO_SET,
+
+        # continue for 3rd edge
+        PUSH_LEGAL_EDGES,
+        RESET_EDGE_REGISTER,
+        WRITE_EDGE_REGISTER,
+        
+        POP_EDGE,
+        IF_EDGE_WEIGHT_LT,
+        WRITE_EDGE_REGISTER,
+
+        ADD_EDGE_TO_SET,
+
+        RET,
+    ]
+
+    # test that the commands are applicable
+    input_graph = generate_ring(3, 420)
     state = VMState(input=input_graph, code=[])
     while state.pc < len(our_program):
         command = our_program[state.pc]
