@@ -39,7 +39,7 @@ from .commands import (
     ConditionalCommand,
 )
 from .feedback import reward
-from .generation import generate_graph
+from .generation import generate_graph, generate_ring, generate_almost_tree
 from .vm import VirtualMachine
 from .vm_state import AbstractCommand
 
@@ -52,10 +52,12 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         max_code_length: int = 32,
         reset_for_every_run: bool = False,
         num_vms_per_env: int = 100,
+        graph_type: str = "random",
         min_n: int = 3,
         max_n: int = 3,
         min_m: int = 3,
         max_m: int = 3,
+        tree_i: int = 1,
         only_reward_on_ret: bool = True,
         action_masking: bool = True,
         add_vm_state_to_observations: bool = False,
@@ -92,10 +94,12 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         )  # we need to cap the size of the edge_set and edge_stack to the size of the COMMAND_REGISTRY so that each state dimension has the same size. otherwise we would need to do annoying things in the transformer.
 
         self.observation_size = observation_size
+        self.graph_type = graph_type
         self.min_n = min_n
         self.max_n = max_n
         self.min_m = min_m
         self.max_m = max_m
+        self.tree_i = tree_i
         self.reset_for_every_run = reset_for_every_run
         self.only_reward_on_ret = only_reward_on_ret
         self.action_masking = action_masking
@@ -106,10 +110,12 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         self.init_args.update(
             {
                 "max_code_length": self.max_code_length,
+                "graph_type": self.graph_type,
                 "min_n": self.min_n,
                 "max_n": self.max_n,
                 "min_m": self.min_m,
                 "max_m": self.max_m,
+                "tree_i": tree_i,
                 "reset_for_every_run": self.reset_for_every_run,
                 "only_reward_on_ret": self.only_reward_on_ret,
                 "action_masking": self.action_masking,
@@ -311,9 +317,19 @@ class MSTCodeEnvironment(gym.Env[npt.ArrayLike, int]):
         self.current_episode_rewards = []
 
         for _ in range(self.num_vms_per_env):
-            n = random.randint(self.min_n, self.max_n)
-            m = random.randint(self.min_m, min(n * (n - 1) // 2, self.max_m))
-            graph = generate_graph(n, m, seed=None)
+            if self.graph_type == "random":
+                n = random.randint(self.min_n, self.max_n)
+                m = random.randint(self.min_m, min(n * (n - 1) // 2, self.max_m))
+                graph = generate_graph(n, m, seed=None)
+            elif self.graph_type == "ring":
+                n = random.randint(self.min_n, self.max_n)
+                graph = generate_ring(n, seed=None)
+            elif self.graph_type == "almost_tree":
+                n = random.randint(self.min_n, self.max_n)
+                i = random.randint(self.min_tree_i, self.max_tree_i)
+                graph = generate_almost_tree(n, i, seed=None)
+            else:
+                raise ValueError("Bad graph type! " + self.graph_type)
 
             self.vms.append(
                 VirtualMachine(

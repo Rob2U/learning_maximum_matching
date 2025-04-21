@@ -6,7 +6,7 @@ num_vms_per_env: 100
 only_reward_of_first_vm: False
 action_masking: True
 vectorize_environment: False
-device: cuda
+device: cpu
 
 # STATE
 # currently only adds the state of the first VM to the observation. Therefore, it makes sense to set num_vms_per_env to 1 if add_vm_state_to_observations is set to True

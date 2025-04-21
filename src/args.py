@@ -23,10 +23,13 @@ class GlobalArgs(Serializable):
     # ENVIRONMENT -- GRAPH Generation
     num_vms_per_env: int = 100
     only_reward_of_first_vm: bool = False
+
+    graph_type: str = "random" # "random" | "ring" | "almost_tree"
     min_n: int = 3
     min_m: int = 3
     max_n: int = 3
     max_m: int = 3
+    tree_i: int = 1
 
     # REWARDS:
     punish_cap: int = 24

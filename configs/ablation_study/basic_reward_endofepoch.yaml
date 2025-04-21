@@ -6,14 +6,14 @@ num_vms_per_env: 100
 only_reward_of_first_vm: False
 action_masking: True
 vectorize_environment: False
-device: cuda
+device: cpu
 
 # STATE
 # currently only adds the state of the first VM to the observation. Therefore, it makes sense to set num_vms_per_env to 1 if add_vm_state_to_observations is set to True
 add_vm_state_to_observations: False
 
 # REWARDs
-only_reward_on_ret: False
+only_reward_on_ret: True
 punish_cap: 24
 
 # ENVIRONMENT -- GRAPH Generation
@@ -50,9 +50,9 @@ reward_fn:
   reward_distance_to_MST: 0.0
   reward_connected: 0.0
 
-  reward_correct_edges: 0.0
-  punish_mst_weight_too_large: 0.0
-  punish_no_improvement: 1.0
+  reward_correct_edges: 1.0
+  punish_mst_weight_too_large: 1.0
+  punish_no_improvement: 0.0
 
 factor_fn:
   punish_code_length: 1.0
